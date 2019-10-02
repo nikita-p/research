@@ -370,6 +370,7 @@ public :
    virtual Long64_t LoadTree(Long64_t entry);
    virtual void     Init(TTree *tree);
    virtual void     Loop(string file = "train.root");
+   virtual void     GetSoftPhotonsNumber(string file = "soft_ph.csv");
    virtual Bool_t   Notify();
    virtual void     Show(Long64_t entry = -1);
 };
@@ -649,6 +650,18 @@ Int_t MC::Cut(Long64_t entry)
 // This function may be called from Loop.
 // returns  1 if entry is accepted.
 // returns -1 otherwise.
-   return 1;
+  double P_CUT = 2*(0.0869*emeas-36.53);
+  double SOFT_PHOTONS_MOMENTUM = 0;
+  int j = 0;
+  for(int i=0; i<nsim; i++){
+    if((simtype[i]==310)&&(simorig[i]==0)){
+      SOFT_PHOTONS_MOMENTUM += simmom[i];
+      j++;
+    }
+    if( j==2 )
+    std::cout << "Warning\n";
+  }
+  if( TMath::Abs(SOFT_PHOTONS_MOMENTUM-sqrt(emeas*emeas - 497.614*497.614))>P_CUT ) return -1; //если импульс KS в событии отличается от импульсе, при энергии KS равной энергии пучка больше чем на P_CUT, то не работать с ним
+  return 1;
 }
 #endif // #ifdef MC_cxx

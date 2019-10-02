@@ -7,5 +7,6 @@ using namespace std;
 void events(){
   MC a("../inputs/model/trees");
   a.Loop();
-  //return;
+  a.GetSoftPhotonsNumber();
+  return;
 }
