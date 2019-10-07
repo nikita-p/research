@@ -4,9 +4,14 @@
 #include <TStyle.h>
 #include <TCanvas.h>
 #include <fstream>
+#include <TMath.h>
+#include <TLorentzVector.h>
+#include <iostream>
 
 #define mKs 497.614
 #define mPi 139.570
+
+using namespace std;
 
 double pidedx(double P, double dEdX)    //calculate dEdX for pions
 {
@@ -14,7 +19,31 @@ double pidedx(double P, double dEdX)    //calculate dEdX for pions
   return pidedx;
 }
 
-void MC::GetSoftPhotonsNumber(string file = "soft_ph.csv")
+void MC::SetOutputPath(string key)
+{
+  string filepath = "../outputs/" + key + "/";
+  if (fChain == 0 ){
+    this->path = (filepath + "failed.root");
+    return;
+  }
+
+  Long64_t nentries = fChain->GetEntriesFast();
+  Long64_t nbytes = 0, nb = 0;
+
+  char label[100];
+  for (Long64_t jentry=0; jentry<1;jentry++) {
+    Long64_t ientry = LoadTree(jentry);
+    if (ientry < 0) break;
+    nb = fChain->GetEntry(jentry);   nbytes += nb;
+
+    snprintf(label, sizeof(label), "%.2f.root", ebeam);
+  }
+  this->path = filepath + label;
+  cout << "Out path: " << this->path << endl;
+  return;
+}
+
+void MC::GetSoftPhotonsNumber(string file)
 {
   if (fChain == 0) return;
   Long64_t nentries = fChain->GetEntriesFast();
@@ -49,15 +78,15 @@ void MC::GetSoftPhotonsNumber(string file = "soft_ph.csv")
   return;
 }
 
-void MC::Loop(string file = "train.root")
+void MC::Loop()
 {
   if (fChain == 0) return;
   Long64_t nentries = fChain->GetEntriesFast();
   Long64_t nbytes = 0, nb = 0;
 
-  TFile* f = TFile::Open(file.c_str(), "recreate");
+  TFile* f = TFile::Open(path.c_str(), "recreate");
   double BEAM_ENERGY, LABEL;
-  double MASS, ENERGY, IMPULSE, ALIGN, QUALITY, THETA, LEN; //масса, энергия, импульс, угол, качество события
+  double MASS, ENERGY, IMPULSE, ALIGN, THETA, LEN; //масса, энергия, импульс, угол, качество события
   int TRIGGER; //триггеры
   double RADIUS[2]; //отлёт от пучков
   double DEDX[2]; // dE/dX
@@ -70,14 +99,13 @@ void MC::Loop(string file = "train.root")
   pair<int,int> index(0,0);
   int good;
 
-  TTree *t = new TTree("InvMass", "Tree for invariant mass without energy cut");
+  TTree *t = new TTree("t", "Tree for invariant mass without energy cut");
   t->Branch("label", &LABEL, "label/D");
   t->Branch("be", &BEAM_ENERGY, "be/D");
   t->Branch("m", &MASS, "m/D");
   t->Branch("e", &ENERGY, "e/D");
   t->Branch("p", &IMPULSE, "p/D");
   t->Branch("align", &ALIGN, "align/D");
-  t->Branch("win", &WIN, "win/O");
   t->Branch("t", &TRIGGER, "t/I");
   t->Branch("dedx", &DEDX, "dedx[2]/D");
   t->Branch("theta", &THETA, "theta/D");
@@ -94,12 +122,10 @@ void MC::Loop(string file = "train.root")
     //Init vars
     index = {-1, -1}; //индексы хороших треков (отрицательные индексы говорят о том, что треков нет)
     good = 0; //число хороших треков (важно не забыть, что в начале обработки каждого события здесь должен быть 0)
-    QUALITY = 0; //субъективно-объективный параметр, отражающий качество данного события
 
     //Специальный отбор на мягкие фотоны для моделирования
-    if(model){
+    if(model)
       if (Cut(ientry) < 0) continue;
-    }
 
     //Conditions
     if(nt<2) continue; //нет двух треков, нет и дел с таким событием

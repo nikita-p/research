@@ -11,6 +11,8 @@
 #include <TROOT.h>
 #include <TChain.h>
 #include <TFile.h>
+#include <fstream>
+#include <iostream>
 
 // Header file for the classes stored in the TTree if any.
 
@@ -18,6 +20,7 @@ class MC {
 public :
    TTree          *fChain;   //!pointer to the analyzed TTree or TChain
    Int_t           fCurrent; //!current Tree number in a TChain
+   string          path; //path to output file
 
 // Fixed size dimensions of array or collections stored in the TTree if any.
 
@@ -25,12 +28,12 @@ public :
    Float_t         ebeam;
    Float_t         emeas;
    Float_t         demeas;
-   Float_t         emeas0;
-   Float_t         demeas0;
+   //Float_t         emeas0;
+   //Float_t         demeas0;
    Float_t         xbeam;
    Float_t         ybeam;
    Int_t           runnum;
-   Int_t           finalstate_id;
+   //Int_t           finalstate_id;
    Int_t           evnum;
    Int_t           trigbits;
    Int_t           trigmchs;
@@ -47,8 +50,8 @@ public :
    Float_t         z0;
    Float_t         psumch;
    Float_t         psumnu;
-   Float_t         lumoff;
-   Float_t         lumofferr;
+   //Float_t         lumoff;
+   //Float_t         lumofferr;
    Int_t           nv_total;
    Int_t           nv;
    Int_t           vtrk[3];   //[nv]
@@ -195,12 +198,12 @@ public :
    TBranch        *b_ebeam;   //!
    TBranch        *b_emeas;   //!
    TBranch        *b_demeas;   //!
-   TBranch        *b_emeas0;   //!
-   TBranch        *b_demeas0;   //!
+   //TBranch        *b_emeas0;   //!
+   //TBranch        *b_demeas0;   //!
    TBranch        *b_xbeam;   //!
    TBranch        *b_ybeam;   //!
    TBranch        *b_runnum;   //!
-   TBranch        *b_finalstate_id;   //!
+   //TBranch        *b_finalstate_id;   //!
    TBranch        *b_evnum;   //!
    TBranch        *b_trigbits;   //!
    TBranch        *b_trigmchs;   //!
@@ -217,8 +220,8 @@ public :
    TBranch        *b_z0;   //!
    TBranch        *b_psumch;   //!
    TBranch        *b_psumnu;   //!
-   TBranch        *b_lumoff;   //!
-   TBranch        *b_lumofferr;   //!
+   //TBranch        *b_lumoff;   //!
+   //TBranch        *b_lumofferr;   //!
    TBranch        *b_nv_total;   //!
    TBranch        *b_nv;   //!
    TBranch        *b_vtrk;   //!
@@ -361,15 +364,16 @@ public :
    TBranch        *b_nlostbanks;   //!
    TBranch        *b_ncorruptedbanks;   //!
 
-   MC(TTree *tree=0);
-   MC(string textname);
-   MC(std::vector<string> filenames);
+   MC(TTree *tree=0, string key="model");
+   MC(string textname, string key);
+   MC(std::vector<string> filenames, string key);
    virtual ~MC();
    virtual Int_t    Cut(Long64_t entry);
    virtual Int_t    GetEntry(Long64_t entry);
    virtual Long64_t LoadTree(Long64_t entry);
    virtual void     Init(TTree *tree);
-   virtual void     Loop(string file = "train.root");
+   virtual void     Loop();
+   virtual void     SetOutputPath(string key);
    virtual void     GetSoftPhotonsNumber(string file = "soft_ph.csv");
    virtual Bool_t   Notify();
    virtual void     Show(Long64_t entry = -1);
@@ -378,10 +382,8 @@ public :
 #endif
 
 #ifdef MC_cxx
-MC::MC(string textname) : fChain(0)
+MC::MC(string textname, string key) : fChain(0)
 {
-  //TFile* f = TFile::Open(filename.c_str());
-  //TTree* t = (TTree*)f->Get("tr_ph");
   TChain* t = new TChain("tr_ph");
   string chain_tree;
   ifstream o(textname.c_str());
@@ -389,18 +391,20 @@ MC::MC(string textname) : fChain(0)
     t->Add(chain_tree.c_str());
   }
   Init(t);
+  SetOutputPath(key);
 }
 
-MC::MC(std::vector<string> filenames) : fChain(0)
+MC::MC(std::vector<string> filenames, string key) : fChain(0)
 {
   TChain* t = new TChain("tr_ph");
   for (auto f = filenames.begin(); f != filenames.end(); f++) {
     t->Add((*f).c_str());
   }
   Init(t);
+  SetOutputPath(key);
 }
 
-MC::MC(TTree *tree) : fChain(0)
+MC::MC(TTree *tree, string key) : fChain(0)
 {
 // if parameter tree is not specified (or zero), connect the file
 // used to generate this class and read the Tree.
@@ -413,6 +417,7 @@ MC::MC(TTree *tree) : fChain(0)
 
    }
    Init(tree);
+   SetOutputPath(key);
 }
 
 MC::~MC()
@@ -459,17 +464,17 @@ void MC::Init(TTree *tree)
    fChain->SetBranchAddress("ebeam", &ebeam, &b_ebeam);
    fChain->SetBranchAddress("emeas", &emeas, &b_emeas);
    fChain->SetBranchAddress("demeas", &demeas, &b_demeas);
-   fChain->SetBranchAddress("emeas0", &emeas0, &b_emeas0);
-   fChain->SetBranchAddress("demeas0", &demeas0, &b_demeas0);
+   //fChain->SetBranchAddress("emeas0", &emeas0, &b_emeas0);
+   //fChain->SetBranchAddress("demeas0", &demeas0, &b_demeas0);
    fChain->SetBranchAddress("xbeam", &xbeam, &b_xbeam);
    fChain->SetBranchAddress("ybeam", &ybeam, &b_ybeam);
    fChain->SetBranchAddress("runnum", &runnum, &b_runnum);
-   fChain->SetBranchAddress("finalstate_id", &finalstate_id, &b_finalstate_id);
+   //fChain->SetBranchAddress("finalstate_id", &finalstate_id, &b_finalstate_id);
    fChain->SetBranchAddress("evnum", &evnum, &b_evnum);
    fChain->SetBranchAddress("trigbits", &trigbits, &b_trigbits);
    fChain->SetBranchAddress("trigmchs", &trigmchs, &b_trigmchs);
    fChain->SetBranchAddress("trigtime", &trigtime, &b_trigtime);
-   fChain->SetBranchAddress("time", &time, &b_time);
+   //fChain->SetBranchAddress("time", &time, &b_time);
    fChain->SetBranchAddress("dcfittime", &dcfittime, &b_dcfittime);
    fChain->SetBranchAddress("anttime", &anttime, &b_anttime);
    fChain->SetBranchAddress("mutime", &mutime, &b_mutime);
@@ -481,8 +486,8 @@ void MC::Init(TTree *tree)
    fChain->SetBranchAddress("z0", &z0, &b_z0);
    fChain->SetBranchAddress("psumch", &psumch, &b_psumch);
    fChain->SetBranchAddress("psumnu", &psumnu, &b_psumnu);
-   fChain->SetBranchAddress("lumoff", &lumoff, &b_lumoff);
-   fChain->SetBranchAddress("lumofferr", &lumofferr, &b_lumofferr);
+   //fChain->SetBranchAddress("lumoff", &lumoff, &b_lumoff);
+   //fChain->SetBranchAddress("lumofferr", &lumofferr, &b_lumofferr);
    fChain->SetBranchAddress("nv_total", &nv_total, &b_nv_total);
    fChain->SetBranchAddress("nv", &nv, &b_nv);
    fChain->SetBranchAddress("vtrk", vtrk, &b_vtrk);
@@ -506,12 +511,12 @@ void MC::Init(TTree *tree)
    fChain->SetBranchAddress("tant", tant, &b_tant);
    fChain->SetBranchAddress("tchi2r", tchi2r, &b_tchi2r);
    fChain->SetBranchAddress("tchi2z", tchi2z, &b_tchi2z);
-   fChain->SetBranchAddress("tchi2ndf", tchi2ndf, &b_tchi2ndf);
+   //fChain->SetBranchAddress("tchi2ndf", tchi2ndf, &b_tchi2ndf);
    fChain->SetBranchAddress("tcharge", tcharge, &b_tcharge);
    fChain->SetBranchAddress("ten", ten, &b_ten);
    fChain->SetBranchAddress("tfc", tfc, &b_tfc);
    fChain->SetBranchAddress("tenlxe", tenlxe, &b_tenlxe);
-   fChain->SetBranchAddress("tlengthlxe", tlengthlxe, &b_tlengthlxe);
+   //fChain->SetBranchAddress("tlengthlxe", tlengthlxe, &b_tlengthlxe);
    fChain->SetBranchAddress("tenslxe_layers", tenslxe_layers, &b_tenslxe_layers);
    fChain->SetBranchAddress("tencsi", tencsi, &b_tencsi);
    fChain->SetBranchAddress("tenbgo", tenbgo, &b_tenbgo);
@@ -519,16 +524,16 @@ void MC::Init(TTree *tree)
    fChain->SetBranchAddress("tclphi", tclphi, &b_tclphi);
    fChain->SetBranchAddress("terr", terr, &b_terr);
    fChain->SetBranchAddress("terr0", terr0, &b_terr0);
-   fChain->SetBranchAddress("tindlxe", tindlxe, &b_tindlxe);
-   fChain->SetBranchAddress("tzcc", tzcc, &b_tzcc);
-   fChain->SetBranchAddress("txyzatcl", txyzatcl, &b_txyzatcl);
-   fChain->SetBranchAddress("txyzatlxe", txyzatlxe, &b_txyzatlxe);
-   fChain->SetBranchAddress("tenconv", tenconv, &b_tenconv);
+   //fChain->SetBranchAddress("tindlxe", tindlxe, &b_tindlxe);
+   //fChain->SetBranchAddress("tzcc", tzcc, &b_tzcc);
+   //fChain->SetBranchAddress("txyzatcl", txyzatcl, &b_txyzatcl);
+   //fChain->SetBranchAddress("txyzatlxe", txyzatlxe, &b_txyzatlxe);
+   //fChain->SetBranchAddress("tenconv", tenconv, &b_tenconv);
    fChain->SetBranchAddress("nks_total", &nks_total, &b_nks_total);
    fChain->SetBranchAddress("nks", &nks, &b_nks);
    fChain->SetBranchAddress("ksvind", ksvind, &b_ksvind);
    fChain->SetBranchAddress("kstype", kstype, &b_kstype);
-   fChain->SetBranchAddress("ksfstatus", ksfstatus, &b_ksfstatus);
+   //fChain->SetBranchAddress("ksfstatus", ksfstatus, &b_ksfstatus);
    fChain->SetBranchAddress("ksvchi", ksvchi, &b_ksvchi);
    fChain->SetBranchAddress("ksvxyz", ksvxyz, &b_ksvxyz);
    fChain->SetBranchAddress("ksminv", ksminv, &b_ksminv);
@@ -588,7 +593,7 @@ void MC::Init(TTree *tree)
    fChain->SetBranchAddress("zccamp", zccamp, &b_zccamp);
    fChain->SetBranchAddress("zcct", zcct, &b_zcct);
    fChain->SetBranchAddress("zccz", zccz, &b_zccz);
-   fChain->SetBranchAddress("zccvalid", zccvalid, &b_zccvalid);
+   //fChain->SetBranchAddress("zccvalid", zccvalid, &b_zccvalid);
    fChain->SetBranchAddress("nant", &nant, &b_nant);
    fChain->SetBranchAddress("antch", antch, &b_antch);
    fChain->SetBranchAddress("antt0", antt0, &b_antt0);
@@ -600,12 +605,12 @@ void MC::Init(TTree *tree)
    fChain->SetBranchAddress("much", much, &b_much);
    fChain->SetBranchAddress("mut0", mut0, &b_mut0);
    fChain->SetBranchAddress("mut1", mut1, &b_mut1);
-   fChain->SetBranchAddress("mut2", mut2, &b_mut2);
-   fChain->SetBranchAddress("mut3", mut3, &b_mut3);
+   //fChain->SetBranchAddress("mut2", mut2, &b_mut2);
+   //fChain->SetBranchAddress("mut3", mut3, &b_mut3);
    fChain->SetBranchAddress("mua0", mua0, &b_mua0);
    fChain->SetBranchAddress("mua1", mua1, &b_mua1);
-   fChain->SetBranchAddress("mua2", mua2, &b_mua2);
-   fChain->SetBranchAddress("mua3", mua3, &b_mua3);
+   //fChain->SetBranchAddress("mua2", mua2, &b_mua2);
+   //fChain->SetBranchAddress("mua3", mua3, &b_mua3);
    fChain->SetBranchAddress("must", must, &b_must);
    fChain->SetBranchAddress("nsim", &nsim, &b_nsim);
    fChain->SetBranchAddress("simtype", simtype, &b_simtype);
@@ -616,14 +621,14 @@ void MC::Init(TTree *tree)
    fChain->SetBranchAddress("simvtx", simvtx, &b_simvtx);
    fChain->SetBranchAddress("simvty", simvty, &b_simvty);
    fChain->SetBranchAddress("simvtz", simvtz, &b_simvtz);
-   fChain->SetBranchAddress("ncorr", &ncorr, &b_ncorr);
-   fChain->SetBranchAddress("idcorr", &idcorr, &b_idcorr);
-   fChain->SetBranchAddress("bitcorr", &bitcorr, &b_bitcorr);
-   fChain->SetBranchAddress("nbadbank", &nbadbank, &b_nbadbank);
-   fChain->SetBranchAddress("nbadbankg", &nbadbankg, &b_nbadbankg);
-   fChain->SetBranchAddress("nbadbanks", &nbadbanks, &b_nbadbanks);
-   fChain->SetBranchAddress("nlostbanks", &nlostbanks, &b_nlostbanks);
-   fChain->SetBranchAddress("ncorruptedbanks", &ncorruptedbanks, &b_ncorruptedbanks);
+   //fChain->SetBranchAddress("ncorr", &ncorr, &b_ncorr);
+   //fChain->SetBranchAddress("idcorr", &idcorr, &b_idcorr);
+   //fChain->SetBranchAddress("bitcorr", &bitcorr, &b_bitcorr);
+   //fChain->SetBranchAddress("nbadbank", &nbadbank, &b_nbadbank);
+   //fChain->SetBranchAddress("nbadbankg", &nbadbankg, &b_nbadbankg);
+   //fChain->SetBranchAddress("nbadbanks", &nbadbanks, &b_nbadbanks);
+   //fChain->SetBranchAddress("nlostbanks", &nlostbanks, &b_nlostbanks);
+   //fChain->SetBranchAddress("ncorruptedbanks", &ncorruptedbanks, &b_ncorruptedbanks);
    Notify();
 }
 
@@ -659,7 +664,7 @@ Int_t MC::Cut(Long64_t entry)
       j++;
     }
     if( j==2 )
-    std::cout << "Warning\n";
+    cout << "Warning\n";
   }
   if( TMath::Abs(SOFT_PHOTONS_MOMENTUM-sqrt(emeas*emeas - 497.614*497.614))>P_CUT ) return -1; //если импульс KS в событии отличается от импульсе, при энергии KS равной энергии пучка больше чем на P_CUT, то не работать с ним
   return 1;
