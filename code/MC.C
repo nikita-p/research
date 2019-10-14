@@ -13,7 +13,56 @@
 
 using namespace std;
 
-double pidedx(double P, double dEdX)    //calculate dEdX for pions
+TLorentzVector MC::VectorCreator(double P, double Theta, double Phi, double Mass){
+  TLorentzVector V;
+  V.SetXYZM(0, 0, P, Mass);
+  V.SetTheta(Theta);
+  V.SetPhi(Phi);
+  double eps = 0.0001;
+  if( (fabs(V.Theta()-Theta)>eps) || ( (fabs(V.Phi()-Phi)>eps) && (fabs(V.Phi()-Phi-2*TMath::Pi())>eps) && (fabs(V.Phi()-Phi+2*TMath::Pi())>eps) ) || (fabs(V.M()-Mass)>eps) || (fabs(V.P()-P)>eps) ){
+    cout << "P: " << V.P() << '\t' << P << endl;
+    cout << "Theta: " << V.Theta() << '\t' << Theta << endl;
+    cout << "Phi: " << V.Phi() << '\t' << Phi << endl;
+    cout << "Mass: " << V.M() << '\t' << Mass << endl;
+    cout << "Error" << endl;
+    throw 1; //выбросить исключение
+  }
+  return V;
+}
+
+TMatrixD GetJacobianMatix(TLorentzVector& P1, TLorentzVector& P2){
+  TLorentzVector PK = P1 + P2;
+
+  double P[3], Th[3], Ph[3];
+  Th[0] = PK.Theta();  Th[1] = P1.Theta(); Th[2] = P2.Theta();
+  Ph[0] = PK.Phi();  Ph[1] = P1.Phi(); Ph[2] = P2.Phi();
+  P[0] = PK.P()*sin(Th[0]);  P[1] = P1.P()*sin(Th[1]); P[2] = P2.P()*sin(Th[2]);
+
+  TMatrixD InvT(3,3); //Inverted transform matrix (P, phi, theta)
+  double InvT_arr[9] = {cos(Ph[0]), sin(Ph[0]), 0,
+                        -sin(Ph[0])/P[0], cos(Ph[0])/P[0], 0,
+                        cos(Th[0])*cos(Ph[0])*sin(Th[0])/P[0], cos(Th[0])*sin(Th[0])*sin(Ph[0])/P[0], -sin(Th[0])*sin(Th[0])/P[0]  };
+  InvT.SetMatrixArray( &InvT_arr[0] );
+
+  TMatrixD R(3,6); //Right part (P, phi, theta)[1,2]
+  int j;
+  for(int i=1; i<=2; i++){
+    j = 3*(i-1);
+    R(0, j) = cos(Ph[i]); // P/P1
+    R(1, j) = sin(Ph[i]); // P/phi1
+    R(2, j) = 1/tan(Th[i]); // P/theta1
+    R(0, j+1) = -P[i]*sin(Ph[i]); // phi/P1
+    R(1, j+1) = P[i]*cos(Ph[i]); // phi/phi1
+    R(2, j+1) = 0; // phi/theta1
+    R(0, j+2) = 0;
+    R(1, j+2) = 0;
+    R(2, j+2) = -P[i]/pow(sin(Th[i]),2);
+  }
+
+  return InvT*R;
+}
+
+double MC::pidedx(double P, double dEdX)    //calculate dEdX for pions
 {
   double pidedx = 5.58030e+9/pow(P+40.,3)+2.21228e+3-3.77103e-1*P-dEdX;
   return pidedx;
@@ -78,6 +127,93 @@ void MC::GetSoftPhotonsNumber(string file)
   return;
 }
 
+int MC::StandardProcedure(Long64_t entry, std::vector<int> goods){ //вернуть отрицательное значение, если не проходит отборы
+
+  if(nks_total<=0) return -1; //нет каонов - нет и отбора
+
+  double P_CUT = 2*(0.0869*emeas-36.53);  //для каждой энергии кат по импульсу(энергии) теперь будет различаться
+  double minDiv = TMath::Infinity();
+
+  int bestKs = -1; //пора искать лучший каон. Из всех, найденных процедурой, найдём лучший, с инв.массой наиболее близкой к массе каона.
+  for(int i=0; i<nks_total; i++){
+    if(fabs(ksminv[i]-mKs)>minDiv) continue;
+    minDiv = fabs(ksminv[i]-mKs);
+    bestKs = i;
+  }
+
+  if(ksvind[bestKs][0]>ksvind[bestKs][1]) // проверить, что первый записанный трек может быть больше второго (добавил на всякий случай)
+    cout << "WARNING THERE: " << ksvind[bestKs][0] << '\t' << ksvind[bestKs][1] << endl;
+  if( ksvind[bestKs][0]!=goods[0] || ksvind[bestKs][1]!=goods[1] ) return -1; //если хоть один трек процедурного каона не совпадает с нашим хорошим, то к чёрту его
+
+  if( ksalign[bestKs] < 0.8) return -1; //отбор по косинусу между направлением импульса и направлением на пучок в р-фи плоскости
+
+  if( fabs( ksptot[bestKs] - sqrt(emeas*emeas - mKs*mKs) ) > P_CUT ) return -1; //отбор по импульсу каона
+
+  return bestKs;
+}
+
+int MC::Kinfit(Long64_t entry, std::vector<int> goods, double& mass_rec, double& chi){ //Кин.фит
+  vector<KFParticle> InParticles;
+  vector<KFParticle> OutParticles;
+  KFParticle Par[4];
+
+  InParticles.clear();
+  OutParticles.clear();
+
+  TLorentzVector PKS[2], KS, KL;
+  PKS[0] = VectorCreator(tptot[goods[0]], tth[goods[0]], tphi[goods[0]], mPi);
+  PKS[1] = VectorCreator(tptot[goods[1]], tth[goods[1]], tphi[goods[1]], mPi);
+
+  KS = PKS[0] + PKS[1];
+  KL = VectorCreator( KS.P(), TMath::Pi() - KS.Theta(), KS.Phi()+TMath::Pi(), mKs );
+
+  Par[0].P = PKS[0];
+  Par[0].Cov = GetTrErrorMatrix(PKS[0], terr[goods[0]]);
+  InParticles.push_back(Par[0]);
+
+  Par[1].P = PKS[1];
+  Par[1].Cov = GetTrErrorMatrix(PKS[1], terr[goods[1]]);
+  InParticles.push_back(Par[1]);
+
+  float kserr[3][3];
+  TMatrixD J(3,6); //Jacobi matrix //(rows, cols)
+  TMatrixD D(6,6);
+  TMatrixD EM(3,3); //Error Matrix KS
+
+  D.Zero();
+  double Imp[2] = { PKS[0].P()/sqrt(terr[goods[0]][0][0]), PKS[1].P()/sqrt(terr[goods[1]][0][0]) };
+  for(int i=0; i<3; i++)
+  for (int j = 0; j < 3; j++) {
+    D(i,j) = terr[goods[0]][i][j];
+    D(i+3,j+3) = terr[goods[1]][i][j];
+    if( i==0 ){
+      D(i,j) *= Imp[0]; D(i+3, j+3) *= Imp[1];
+    }
+    if( j==0 ){
+      D(i,j) *= Imp[0]; D(i+3, j+3) *= Imp[1];
+    }
+  }
+
+  J = GetJacobianMatix(PKS[0], PKS[1]);
+  TMatrixD JT(TMatrixD::kTransposed, J);
+
+  EM = J*D*JT;
+
+  for(int i=0; i<3; i++)
+    for(int j=0; j<3; j++)
+      kserr[i][j] = EM(i,j);
+
+  Par[2].P = KL;
+  Par[2].Cov = GetTrErrorMatrix(KL, kserr);
+  InParticles.push_back(Par[2]);
+
+  chi = Cmd3KF(emeas, InParticles, OutParticles);
+  mass_rec = ( OutParticles[0].P + OutParticles[1].P ).M();
+  if(chi<10)
+    return 0;
+  return 1;
+}
+
 void MC::Loop()
 {
   if (fChain == 0) return;
@@ -86,30 +222,29 @@ void MC::Loop()
 
   TFile* f = TFile::Open(path.c_str(), "recreate");
   double BEAM_ENERGY, LABEL;
-  double MASS, ENERGY, IMPULSE, ALIGN, THETA, LEN; //масса, энергия, импульс, угол, качество события
+  double MASS, MASS_REC, IMPULSE, ALIGN, THETA, LEN, CHI; //масса, реконструированная масса, импульс, угол, качество события, хи-квадрат
   int TRIGGER; //триггеры
-  double RADIUS[2]; //отлёт от пучков
   double DEDX[2]; // dE/dX
-  bool WIN; //отобранные процедурой события
-  double P_CUT; //для каждой энергии кат по импульсу(энергии) теперь будет различаться
-  double TH_CUT = 0.6; //отбор по углу тета
+  int PROCEDURE; //процедура, которая отобрала событие (1 - kinfit, 2 - standard, 3 - both)
 
 
   //SimpleVars
-  pair<int,int> index(0,0);
-  int good;
+  std::vector<int> goods;
+  int bestKs;
 
   TTree *t = new TTree("t", "Tree for invariant mass without energy cut");
   t->Branch("label", &LABEL, "label/D");
   t->Branch("be", &BEAM_ENERGY, "be/D");
   t->Branch("m", &MASS, "m/D");
-  t->Branch("e", &ENERGY, "e/D");
+  t->Branch("m_rec", &MASS_REC, "m/D");
   t->Branch("p", &IMPULSE, "p/D");
   t->Branch("align", &ALIGN, "align/D");
   t->Branch("t", &TRIGGER, "t/I");
+  t->Branch("proc", &PROCEDURE, "proc/I");
   t->Branch("dedx", &DEDX, "dedx[2]/D");
   t->Branch("theta", &THETA, "theta/D");
   t->Branch("len", &LEN, "len/D");
+  t->Branch("chi", &CHI, "chi/D");
 
   bool model = (fChain->GetMaximum("nsim")<1) ? false : true;
   cout << "Is this model? " << (model ? "Yes" : "No") << endl;
@@ -118,82 +253,48 @@ void MC::Loop()
     Long64_t ientry = LoadTree(jentry);
     if (ientry < 0) break;
     nb = fChain->GetEntry(jentry);   nbytes += nb;
-    // if (Cut(ientry) < 0) continue;
-    //Init vars
-    index = {-1, -1}; //индексы хороших треков (отрицательные индексы говорят о том, что треков нет)
-    good = 0; //число хороших треков (важно не забыть, что в начале обработки каждого события здесь должен быть 0)
 
-    //Специальный отбор на мягкие фотоны для моделирования
-    if(model)
-      if (Cut(ientry) < 0) continue;
 
-    //Conditions
-    if(nt<2) continue; //нет двух треков, нет и дел с таким событием
-    if(nks_total<=0) continue; //нет каонов - нет и отбора
+    //Общие условия
+    goods = Good_tracks(ientry);
+    if(goods.size() != 2 ) continue; //2 хороших трека
 
-    for(int i=0; i<nt; i++){ //пробегаем по всем трекам из события, яхууу
+    if( tcharge[goods[0]] + tcharge[goods[1]] != 0 ) continue; //если суммарный заряд ненулевой, то выкинуться
 
-      if( fabs(tz[i])>10.0 ) continue; //вылетел из пучка
-      if( tchi2r[i]>30.0 ) continue; // хи2 хороший
-      if( tchi2z[i]>25.0 ) continue;
-      if((tth[i]>(TMath::Pi() - TH_CUT))||(tth[i] < TH_CUT)) continue; //летит в детектор
-
-      if( tptotv[i]<40. ) continue; //меньшие импульсы непригодны, т.к. треки закрутятся в дк
-      if( tptotv[i]>2*ebeam ) continue; //куда ж ещё больше
-      if( tnhit[i]<6 ) continue; //5 уравнений - 5 неизвестных: phi, theta, P, ...  -->>-- я добавил по сравн. с пред. версией 1 хит (стало 6)
-      if( fabs(pidedx(tptotv[i], tdedx[i]))>2000 ) continue; //ионизационные потери
-
-      good++;
-      if(good>2) break;
-      if(good==1) index.first = i;
-      if(good==2) index.second = i; //запись в пару, если всё забито, то брэйкнуться отсюда
-
-    }
-
-    if(good!=2) continue; //как результат "for'а", если треков меньше (больше) чем достаточно, делаем кик аут в поисках лучшей жизни
-    if( tcharge[index.first] + tcharge[index.second] != 0 ) continue; //если суммарный заряд ненулевой, то выкинуться
-
-    P_CUT = 2*(0.0869*emeas-36.53);
-    double alignMin = 0.8;
-    double rhoCut = 0.1;
-    double minDiv = TMath::Infinity();
-
-    int bestKs = 0; //пора искать лучший каон. Из всех, найденных процедурой, найдём лучший, с инв.массой наиболее близкой к массе каона.
-    for(int i=0; i<nks_total; i++){
-      if(fabs(ksminv[i]-mKs)>minDiv) continue;
-      minDiv = fabs(ksminv[i]-mKs);
-      bestKs = i;
-    }
-
-    if(ksvind[bestKs][0]<ksvind[bestKs][1]){ //здесь изменение, раньше не было варианта, что первый записанный трек может быть больше второго (добавил на всякий случай)
-      if( ksvind[bestKs][0]!=index.first || ksvind[bestKs][1]!=index.second ) continue; //если хоть один трек процедурного каона не совпадает с нашим хорошим, то к чёрту его
-    }
-    else{
-      if( ksvind[bestKs][0]!=index.second || ksvind[bestKs][1]!=index.first ) continue;
-    }
-
-    if( ksalign[bestKs] < alignMin) continue; //отбор по косинусу между направлением импульса и направлением на пучок в р-фи плоскости
-
-    TLorentzVector K;
-    K.SetXYZM(0,0,ksptot[bestKs],mKs); //после фита с общей вершиной
-    K.SetTheta(ksth[bestKs]);
-    K.SetPhi(ksphi[bestKs]);
-    if( fabs( K.P() - sqrt(emeas*emeas - mKs*mKs) ) > P_CUT ) continue; //отбор по энергии каона
-
-    if( fabs(trho[index.first])<rhoCut || fabs(trho[index.second])<rhoCut ) continue; //отбор по прицельному параметру в р-фи
 
     LABEL = ebeam;
     BEAM_ENERGY = emeas;
-    MASS = ksminv[bestKs];
-    ENERGY = K.E();
-    IMPULSE = K.P();
-    ALIGN = ksalign[bestKs];
+    DEDX[0] = tdedx[goods[0]];
+    DEDX[1] = tdedx[goods[1]];
     TRIGGER = trigbits - 1;
-    DEDX[0] = tdedx[index.first];
-    DEDX[1] = tdedx[index.second];
-    THETA = ksth[bestKs];
-    LEN = kslen[bestKs];
-    t->Fill();
+
+        //инициализировать стандартными значениями переменные для дерева
+    PROCEDURE = 0;
+    MASS = -1;
+    MASS_REC = -1;
+    IMPULSE = -1;
+    ALIGN = -1;
+    THETA = -1;
+    LEN = -1;
+    CHI = -1;
+
+    //Kinfit
+    PROCEDURE += Kinfit(ientry, goods, MASS_REC, CHI);
+
+    //Стандартная процедура
+    bestKs = model ? ( (Cut(ientry) < 0) ? -1 : StandardProcedure(ientry, goods) ) : StandardProcedure(ientry, goods); //Специальный отбор на мягкие фотоны для моделирования
+    if(bestKs>=0){
+      PROCEDURE += 2;
+      MASS = ksminv[bestKs];
+      IMPULSE = ksptot[bestKs];
+      ALIGN = ksalign[bestKs];
+      THETA = ksth[bestKs];
+      LEN = kslen[bestKs];
+    }
+
+    if(PROCEDURE>0)
+      t->Fill();
+
   }
   f->Write();
   return;
