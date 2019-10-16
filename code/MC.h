@@ -84,11 +84,8 @@ public :
    Float_t         tlengthlxe[8];   //[nt]
    Float_t         tenslxe_layers[8][14];   //[nt]
    Float_t         tencsi[8];   //[nt]
-   //Float_t         tenbgo[8];   //[nt]
-   //Float_t         tclth[8];   //[nt]
    Float_t         tclphi[8];   //[nt]
    Float_t         terr[8][3][3];   //[nt]
-   //Float_t         terr0[8][5][5];   //[nt]
    Int_t           tindlxe[8];   //[nt]
    Float_t         tzcc[8][2];   //[nt]
    Float_t         txyzatcl[8][3];   //[nt]
@@ -96,7 +93,7 @@ public :
    Int_t           tenconv[8];   //[nt]
    Int_t           nks_total;
    Int_t           nks;
-   Int_t           ksvind[5][2];   //[nks]
+   Int_t           ksvind[5][20];   //[nks]
    Int_t           kstype[5];   //[nks]
    Int_t           ksfstatus[5];   //[nks]
    Float_t         ksvchi[5];   //[nks]
@@ -199,12 +196,9 @@ public :
    TBranch        *b_ebeam;   //!
    TBranch        *b_emeas;   //!
    TBranch        *b_demeas;   //!
-   //TBranch        *b_emeas0;   //!
-   //TBranch        *b_demeas0;   //!
    TBranch        *b_xbeam;   //!
    TBranch        *b_ybeam;   //!
    TBranch        *b_runnum;   //!
-   //TBranch        *b_finalstate_id;   //!
    TBranch        *b_evnum;   //!
    TBranch        *b_trigbits;   //!
    TBranch        *b_trigmchs;   //!
@@ -221,8 +215,6 @@ public :
    TBranch        *b_z0;   //!
    TBranch        *b_psumch;   //!
    TBranch        *b_psumnu;   //!
-   //TBranch        *b_lumoff;   //!
-   //TBranch        *b_lumofferr;   //!
    TBranch        *b_nv_total;   //!
    TBranch        *b_nv;   //!
    TBranch        *b_vtrk;   //!
@@ -254,11 +246,8 @@ public :
    TBranch        *b_tlengthlxe;   //!
    TBranch        *b_tenslxe_layers;   //!
    TBranch        *b_tencsi;   //!
-   //TBranch        *b_tenbgo;   //!
-   //TBranch        *b_tclth;   //!
    TBranch        *b_tclphi;   //!
    TBranch        *b_terr;   //!
-   //TBranch        *b_terr0;   //!
    TBranch        *b_tindlxe;   //!
    TBranch        *b_tzcc;   //!
    TBranch        *b_txyzatcl;   //!
@@ -517,11 +506,8 @@ void MC::Init(TTree *tree)
    fChain->SetBranchAddress("tenlxe", tenlxe, &b_tenlxe);
    fChain->SetBranchAddress("tenslxe_layers", tenslxe_layers, &b_tenslxe_layers);
    fChain->SetBranchAddress("tencsi", tencsi, &b_tencsi);
-   //fChain->SetBranchAddress("tenbgo", tenbgo, &b_tenbgo);
-   //fChain->SetBranchAddress("tclth", tclth, &b_tclth);
    fChain->SetBranchAddress("tclphi", tclphi, &b_tclphi);
    fChain->SetBranchAddress("terr", terr, &b_terr);
-   //fChain->SetBranchAddress("terr0", terr0, &b_terr0);
    fChain->SetBranchAddress("nks_total", &nks_total, &b_nks_total);
    fChain->SetBranchAddress("nks", &nks, &b_nks);
    fChain->SetBranchAddress("ksvind", ksvind, &b_ksvind);

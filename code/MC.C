@@ -17,7 +17,7 @@ TLorentzVector MC::VectorCreator(double P, double Theta, double Phi, double Mass
   TLorentzVector V;
   V.SetXYZM(0, 0, P, Mass);
   V.SetTheta(Theta);
-  V.SetPhi(Phi);
+  V.SetPhi(Phi);/*
   double eps = 0.0001;
   if( (fabs(V.Theta()-Theta)>eps) || ( (fabs(V.Phi()-Phi)>eps) && (fabs(V.Phi()-Phi-2*TMath::Pi())>eps) && (fabs(V.Phi()-Phi+2*TMath::Pi())>eps) ) || (fabs(V.M()-Mass)>eps) || (fabs(V.P()-P)>eps) ){
     cout << "P: " << V.P() << '\t' << P << endl;
@@ -25,8 +25,8 @@ TLorentzVector MC::VectorCreator(double P, double Theta, double Phi, double Mass
     cout << "Phi: " << V.Phi() << '\t' << Phi << endl;
     cout << "Mass: " << V.M() << '\t' << Mass << endl;
     cout << "Error" << endl;
-    throw 1; //выбросить исключение
-  }
+    //throw 1; //выбросить исключение
+  }*/
   return V;
 }
 
@@ -60,6 +60,28 @@ TMatrixD GetJacobianMatix(TLorentzVector& P1, TLorentzVector& P2){
   }
 
   return InvT*R;
+}
+
+pair<double, double> psi_angle(double P_KS) //P [MeV]
+{
+  //Landau: vol.2 p.56 ex.3
+  pair<double, double> p;
+  double V = P_KS / sqrt(P_KS * P_KS + mKs * mKs);               //KS speed in Lab System
+  double v0 = sqrt(pow(mKs / 2., 2) - pow(mPi, 2)) / (mKs / 2.); //Pi speed in center-of-mass
+
+  if (V < v0)
+  {
+    p = {2 * atan((v0 / V) * sqrt(1 - V * V)), TMath::Pi()};
+    return p;
+  }
+  if (V > v0 && V < (v0 / sqrt(1 - v0 * v0)))
+  {
+    p = {0, asin(sqrt((1 - V * V) / (1 - v0 * v0)))};
+    return p;
+  }
+  p = {0, 2 * atan((v0 / V) * sqrt(1 - V * V))};
+
+  return p;
 }
 
 double MC::pidedx(double P, double dEdX)    //calculate dEdX for pions
@@ -153,12 +175,7 @@ int MC::StandardProcedure(Long64_t entry, std::vector<int> goods){ //верну�
 }
 
 int MC::Kinfit(Long64_t entry, std::vector<int> goods, double& mass_rec, double& chi){ //Кин.фит
-  vector<KFParticle> InParticles;
-  vector<KFParticle> OutParticles;
-  KFParticle Par[4];
-
-  InParticles.clear();
-  OutParticles.clear();
+  if(nph==0) return 0; //если нет фотонов, то выкинуться
 
   TLorentzVector PKS[2], KS, KL;
   PKS[0] = VectorCreator(tptot[goods[0]], tth[goods[0]], tphi[goods[0]], mPi);
@@ -166,6 +183,29 @@ int MC::Kinfit(Long64_t entry, std::vector<int> goods, double& mass_rec, double&
 
   KS = PKS[0] + PKS[1];
   KL = VectorCreator( KS.P(), TMath::Pi() - KS.Theta(), KS.Phi()+TMath::Pi(), mKs );
+
+  //Проверить пространственный угол
+  pair<double, double> ang = psi_angle(KS.P());
+  if(PKS[0].Angle(PKS[1].Vect())<ang.first*0.95 || PKS[0].Angle(PKS[1].Vect())>ang.second*1.05) return 0;
+
+  TLorentzVector Photon;
+  double MIN_ANG = TMath::Infinity();
+  int bestPh = -1;
+  for(int i=0; i<nph; i++){
+    Photon = VectorCreator(phen[i], phth[i], phphi[i], 0);
+    if(Photon.Angle(KL.Vect()) < MIN_ANG){
+      MIN_ANG = Photon.Angle(KL.Vect());
+      bestPh = i;
+    }
+  }
+  KL = VectorCreator( KS.P(), phth[bestPh], phphi[bestPh], mKs);
+
+  vector<KFParticle> InParticles;
+  vector<KFParticle> OutParticles;
+  KFParticle Par[4];
+
+  InParticles.clear();
+  OutParticles.clear();
 
   Par[0].P = PKS[0];
   Par[0].Cov = GetTrErrorMatrix(PKS[0], terr[goods[0]]);
@@ -175,42 +215,22 @@ int MC::Kinfit(Long64_t entry, std::vector<int> goods, double& mass_rec, double&
   Par[1].Cov = GetTrErrorMatrix(PKS[1], terr[goods[1]]);
   InParticles.push_back(Par[1]);
 
-  float kserr[3][3];
-  TMatrixD J(3,6); //Jacobi matrix //(rows, cols)
-  TMatrixD D(6,6);
-  TMatrixD EM(3,3); //Error Matrix KS
-
-  D.Zero();
-  double Imp[2] = { PKS[0].P()/sqrt(terr[goods[0]][0][0]), PKS[1].P()/sqrt(terr[goods[1]][0][0]) };
+  float klerr[3][3];
   for(int i=0; i<3; i++)
-  for (int j = 0; j < 3; j++) {
-    D(i,j) = terr[goods[0]][i][j];
-    D(i+3,j+3) = terr[goods[1]][i][j];
-    if( i==0 ){
-      D(i,j) *= Imp[0]; D(i+3, j+3) *= Imp[1];
-    }
-    if( j==0 ){
-      D(i,j) *= Imp[0]; D(i+3, j+3) *= Imp[1];
-    }
-  }
-
-  J = GetJacobianMatix(PKS[0], PKS[1]);
-  TMatrixD JT(TMatrixD::kTransposed, J);
-
-  EM = J*D*JT;
-
-  for(int i=0; i<3; i++)
-    for(int j=0; j<3; j++)
-      kserr[i][j] = EM(i,j);
+  for(int j=0; j<3; j++)
+  klerr[i][j] = 0;
+  klerr[0][0] = pow( 20, 2);
+  klerr[1][1] = pherr[bestPh][2];
+  klerr[2][2] = pherr[bestPh][1];
 
   Par[2].P = KL;
-  Par[2].Cov = GetTrErrorMatrix(KL, kserr);
+  Par[2].Cov = GetTrErrorMatrix(KL, klerr);
   InParticles.push_back(Par[2]);
 
   chi = Cmd3KF(emeas, InParticles, OutParticles);
+  //cout << KL.P() << '\t' << klerr[0][0] << '\t' << klerr[1][1] << '\t' << klerr[2][2] << '\t' << chi << endl;
+  if(chi>100) return 0;
   mass_rec = ( OutParticles[0].P + OutParticles[1].P ).M();
-  if(chi<10)
-    return 0;
   return 1;
 }
 
