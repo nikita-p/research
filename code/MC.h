@@ -371,7 +371,7 @@ public:
   virtual std::vector<int> Good_tracks(Long64_t entry);                  //получить вектор с индексами хороших треков
   virtual int StandardProcedure(Long64_t entry, std::vector<int> goods); //получить KS, который проходит стандартную процедуру отбора
   virtual double pidedx(double P, double dEdX);
-  virtual int Kinfit(Long64_t entry, std::vector<int> goods, double &mass_rec, double &chi, double &energy);
+  virtual int Kinfit(Long64_t entry, std::vector<int> goods, double &mass_rec, double &chi, double &energy, double& mom_kl, double& en_ph);
   virtual TLorentzVector VectorCreator(double P, double Theta, double Phi, double Mass);
 };
 

@@ -49,7 +49,6 @@ double Cmd3KF(double EBeam, vector<KFParticle> &MeasParticle, vector<KFParticle>
     KFParticle OutPart;
     TLorentzVector POut   = (*FitParticle[i].getCurr4Vec())*1000.0;
     OutPart.P = POut;
-    //    OutPart.Cov = (*FitParticle[i].getCovMatrixFit());
     RecoParticle.push_back(OutPart);
   }
 
@@ -66,32 +65,33 @@ TMatrixD GetTrErrorMatrix(TLorentzVector P, float ErrMat[3][3]) {
 
   double pars[3];
 
-  pars[0] = P.P()*sin(P.Theta());
+  pars[0] = P.P()*sin(P.Theta())/1e3;
   pars[1] = P.Phi();
   pars[2] = P.Theta();
 
-  Sym = CovPtPhiTheta2PxPyPz(pars,ErrMat);
+  ErrMat[0][0] *= 1e-6;
+  ErrMat[1][0] *= 1e-3;
+  ErrMat[2][0] *= 1e-3;
+  ErrMat[0][1] *= 1e-3;
+  ErrMat[0][2] *= 1e-3;
 
-  Cov(0,0) = Sym(0,0)/1E6;
-  Cov(0,1) = Sym(0,1)/1E6;
-  Cov(0,2) = Sym(0,2)/1E6;
+  Sym = CovPtPhiTheta2PxPyPz(pars,ErrMat);
+/*
+  Cov(0,0) = Sym(0,0);//1E6;
+  Cov(0,1) = Sym(0,1);//1E6;
+  Cov(0,2) = Sym(0,2);//1E6;
   Cov(1,0) = Cov(0,1);
-  Cov(1,1) = Sym(1,1)/1E6;
-  Cov(1,2) = Sym(1,2)/1E6;
+  Cov(1,1) = Sym(1,1);//1E6;
+  Cov(1,2) = Sym(1,2);//1E6;
   Cov(2,0) = Cov(0,2);
   Cov(2,1) = Cov(1,2);
-  Cov(2,2) = Sym(2,2)/1E6;
-
-  return Cov;
+  Cov(2,2) = Sym(2,2);//1E6;
+*/
+  return Sym;//Cov;
 
 };
 
-TMatrixD GetPhErrorMatrix(TLorentzVector P, double &SigmaPhE, double &SigmaPhTh, double &SigmaPhPhi) {
-  /*
-  TMatrixD A(3,3);
-  TMatrixD AT(3,3);
-  TMatrixD Err(3,3);
-  */
+TMatrixD GetPhErrorMatrix(TLorentzVector P, double SigmaPhE, double SigmaPhTh, double SigmaPhPhi) {
 
   double pars[3];
   float err[3][3];
@@ -115,7 +115,7 @@ TMatrixD GetPhErrorMatrix(TLorentzVector P, double &SigmaPhE, double &SigmaPhTh,
   err[2][2] = SigmaPhTh*SigmaPhTh;
 
   Sym = CovPPhiTheta2PxPyPz(pars,err);
-
+/*
   Cov(0,0) = Sym(0,0);
   Cov(0,1) = Sym(0,1);
   Cov(0,2) = Sym(0,2);
@@ -125,32 +125,6 @@ TMatrixD GetPhErrorMatrix(TLorentzVector P, double &SigmaPhE, double &SigmaPhTh,
   Cov(2,0) = Cov(0,2);
   Cov(2,1) = Cov(1,2);
   Cov(2,2) = Sym(2,2);
-  /*
-  A(0,0) =  P.X()/P.P();
-  A(0,1) =  P.X()/tan(P.Theta())/1E3;
-  A(0,2) = -P.X()*tan(P.Phi())/1E3;
-
-  A(1,0) =  P.Y()/P.P();
-  A(1,1) =  P.Y()/tan(P.Theta())/1E3;
-  A(1,2) =  P.Y()/tan(P.Phi())/1E3;
-
-  A(2,0) =  P.Z()/P.P();
-  A(2,1) = -P.Z()/tan(P.Theta())/1E3;
-  A(2,2) =  0.0;
-
-  AT.Transpose(A);
-
-  Err(0,0) = SigmaPhE*SigmaPhE/1E6;
-  Err(0,1) = 0.0;
-  Err(0,2) = 0.0;
-  Err(1,0) = 0.0;
-  Err(1,1) = SigmaPhTh*SigmaPhTh;
-  Err(1,2) = 0.0;
-  Err(2,0) = 0.0;
-  Err(2,1) = 0.0;
-  Err(2,2) = SigmaPhPhi*SigmaPhPhi;
-
-  Cov = A*Err*AT;
-  */
-  return Cov;
+*/
+  return Sym;//Cov;
 }

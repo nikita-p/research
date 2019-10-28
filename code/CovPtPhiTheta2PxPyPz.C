@@ -1,5 +1,5 @@
 #ifndef CovPtPhiTheta2PxPyPz_H
-#define CovPtPhiTheta2PxPyPz_H 
+#define CovPtPhiTheta2PxPyPz_H
 
 #include "TMatrixDSym.h"
 #include "TMath.h"
@@ -13,7 +13,7 @@ TMatrixDSym CovPtPhiTheta2PxPyPz(const double* pars,const TMatrixDSym& cov){
 
   static TMatrixD tran(3,3);
 
- 
+
   double dpndpo[9]=
     {cphi,-ptr*sphi,0,
      sphi,ptr*cphi,0,
@@ -21,7 +21,7 @@ TMatrixDSym CovPtPhiTheta2PxPyPz(const double* pars,const TMatrixDSym& cov){
 
   for(int i=0;i<9;i++)
     tran(i/3,i%3)=dpndpo[i];
-  
+
   TMatrixDSym newcov=cov;
 
   return newcov.Similarity(tran);
@@ -36,7 +36,7 @@ TMatrixDSym CovPtPhiTheta2PxPyPz_incorrect(const double* pars,const TMatrixDSym&
 
   static TMatrixD tran(3,3);
 
- 
+
   double dpndpo[9]=
     {cphi,-ptr*sphi,0,
      sphi,ptr*cphi,0,
@@ -44,7 +44,7 @@ TMatrixDSym CovPtPhiTheta2PxPyPz_incorrect(const double* pars,const TMatrixDSym&
 
   for(int i=0;i<9;i++)
     tran(i/3,i%3)=dpndpo[i];
-  
+
   TMatrixDSym newcov=cov;
   newcov(1,0)=newcov(0,1)=TMath::Sign(1,charge)*cov(0,1);
   newcov(2,0)=newcov(0,2)=TMath::Sign(1,charge)*cov(0,2);
@@ -69,4 +69,3 @@ TMatrixDSym CovPtPhiTheta2PxPyPz_incorrect(const double* pars,const float cov[3]
   return CovPtPhiTheta2PxPyPz_incorrect(pars,mcov,charge);
 }
 #endif
-

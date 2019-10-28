@@ -80,7 +80,7 @@ public:
 void events()
 {
   TreeReader t;
-  //t.WashingModel("../inputs/model/trees_old");
-  t.Washing11("../inputs/11/trees");
+  t.WashingModel("../inputs/model/trees_old");
+  //t.Washing11("../inputs/11/trees");
   return;
 }

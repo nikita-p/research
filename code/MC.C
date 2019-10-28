@@ -18,16 +18,7 @@ TLorentzVector MC::VectorCreator(double P, double Theta, double Phi, double Mass
   TLorentzVector V;
   V.SetXYZM(0, 0, P, Mass);
   V.SetTheta(Theta);
-  V.SetPhi(Phi); /*
-  double eps = 0.0001;
-  if( (fabs(V.Theta()-Theta)>eps) || ( (fabs(V.Phi()-Phi)>eps) && (fabs(V.Phi()-Phi-2*TMath::Pi())>eps) && (fabs(V.Phi()-Phi+2*TMath::Pi())>eps) ) || (fabs(V.M()-Mass)>eps) || (fabs(V.P()-P)>eps) ){
-    cout << "P: " << V.P() << '\t' << P << endl;
-    cout << "Theta: " << V.Theta() << '\t' << Theta << endl;
-    cout << "Phi: " << V.Phi() << '\t' << Phi << endl;
-    cout << "Mass: " << V.M() << '\t' << Mass << endl;
-    cout << "Error" << endl;
-    //throw 1; //выбросить исключение
-  }*/
+  V.SetPhi(Phi);
   return V;
 }
 
@@ -200,7 +191,7 @@ int MC::StandardProcedure(Long64_t entry, std::vector<int> goods)
   return bestKs;
 }
 
-int MC::Kinfit(Long64_t entry, std::vector<int> goods, double &mass_rec, double &chi, double &energy)
+int MC::Kinfit(Long64_t entry, std::vector<int> goods, double &mass_rec, double &chi, double &energy, double &mom_kl, double& en_ph)
 { //Кин.фит
   if (nph == 0)
     return 0; //если нет фотонов, то выкинуться
@@ -217,14 +208,15 @@ int MC::Kinfit(Long64_t entry, std::vector<int> goods, double &mass_rec, double 
   int bestPh = -1;
   for (int i = 0; i < nph; i++)
   {
-    Photon = VectorCreator(phen[i], phth[i], phphi[i], 0);
+    Photon = VectorCreator(phen0[i], phth0[i], phphi0[i], 0);
     if (Photon.Angle(KL.Vect()) < MIN_ANG)
     {
-      MIN_ANG = Photon.Angle(KL.Vect());
+      MIN_ANG = Photon.Angle(KL.Vect());// /sqrt( pow(pherr[i][1],2) + pow(pherr[i][2],2) );
       bestPh = i;
     }
   }
-  KL = VectorCreator(KS.P(), phth[bestPh], phphi[bestPh], mKs);
+  en_ph = phen0[bestPh];
+  KL = VectorCreator(KS.P(), phth0[bestPh], phphi0[bestPh], mKs);
 
   vector<KFParticle> InParticles;
   vector<KFParticle> OutParticles;
@@ -245,7 +237,7 @@ int MC::Kinfit(Long64_t entry, std::vector<int> goods, double &mass_rec, double 
   for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++)
       klerr[i][j] = 0;
-  klerr[0][0] = pow(20, 2);
+  klerr[0][0] = pow(30, 2);
   klerr[1][1] = pherr[bestPh][2];
   klerr[2][2] = pherr[bestPh][1];
 
@@ -254,24 +246,22 @@ int MC::Kinfit(Long64_t entry, std::vector<int> goods, double &mass_rec, double 
   InParticles.push_back(Par[2]);
 
   chi = Cmd3KF(emeas, InParticles, OutParticles);
-  //cout << KL.P() << '\t' << klerr[0][0] << '\t' << klerr[1][1] << '\t' << klerr[2][2] << '\t' << chi << endl;
-  if (chi > 100)
+  if (chi > 1e5 || chi < 0)
     return 0;
 
   KS = (OutParticles[0].P + OutParticles[1].P); //кинфитированный KS
-
-  //Отбор по импульсу
-  double P_CUT = 2 * (0.0869 * emeas - 36.53);
-  if (fabs(KS.P() - sqrt(pow(emeas, 2) - pow(mKs, 2))) > 2 * P_CUT)
-    return 0;
+  KL = OutParticles[2].P; //кинфитированный KL
+  PKS[0] = OutParticles[0].P;
+  PKS[1] = OutParticles[1].P;
 
   //Проверить пространственный угол
   pair<double, double> ang = psi_angle(KS.P());
-  if (PKS[0].Angle(PKS[1].Vect()) < ang.first * 0.95 || PKS[0].Angle(PKS[1].Vect()) > ang.second * 1.05)
+  if (PKS[0].Angle(PKS[1].Vect()) < ang.first * 1.1 || PKS[0].Angle(PKS[1].Vect()) > ang.second * 0.9 ) //жёсткий кат
     return 0;
 
   energy = KS.E();
   mass_rec = KS.M();
+  mom_kl = KL.P();
   return 1;
 }
 
@@ -284,7 +274,8 @@ void MC::Loop()
 
   TFile *f = TFile::Open(path.c_str(), "recreate");
   double BEAM_ENERGY, LABEL;
-  double MASS, MASS_REC, IMPULSE, ALIGN, THETA, LEN, CHI, EKS; //масса, реконструированная масса, импульс, угол, качество события, хи-квадрат, энергия KS
+  double MASS, MASS_REC, IMPULSE, ALIGN, THETA, LEN, CHI, EKS, PKL; //масса, реконструированная масса, импульс, угол, качество события, хи-квадрат, энергия KS, импульс KL
+  double PHEN; //энергия кластера
   int TRIGGER;                                                 //триггеры
   double DEDX[2];                                              // dE/dX
   int PROCEDURE;                                               //процедура, которая отобрала событие (1 - kinfit, 2 - standard, 3 - both)
@@ -307,6 +298,8 @@ void MC::Loop()
   t->Branch("len", &LEN, "len/D");
   t->Branch("chi", &CHI, "chi/D");
   t->Branch("eks", &EKS, "eks/D");
+  t->Branch("pkl", &PKL, "pkl/D");
+  t->Branch("phen", &PHEN, "phen/D");
 
   bool model = (fChain->GetMaximum("nsim") < 1) ? false : true;
   cout << "Is this model? " << (model ? "Yes" : "No") << endl;
@@ -343,9 +336,11 @@ void MC::Loop()
     LEN = -1;
     CHI = -1;
     EKS = -1;
+    PKL = -1;
+    PHEN = -1;
 
     //Kinfit
-    PROCEDURE += Kinfit(ientry, goods, MASS_REC, CHI, EKS);
+    PROCEDURE += Kinfit(ientry, goods, MASS_REC, CHI, EKS, PKL, PHEN);
 
     //Стандартная процедура
     bestKs = model ? ((Cut(ientry) < 0) ? -1 : StandardProcedure(ientry, goods)) : StandardProcedure(ientry, goods); //Специальный отбор на мягкие фотоны для моделирования
