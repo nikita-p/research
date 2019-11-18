@@ -22,46 +22,6 @@ TLorentzVector MC::VectorCreator(double P, double Theta, double Phi, double Mass
   return V;
 }
 
-TMatrixD GetJacobianMatix(TLorentzVector &P1, TLorentzVector &P2)
-{
-  TLorentzVector PK = P1 + P2;
-
-  double P[3], Th[3], Ph[3];
-  Th[0] = PK.Theta();
-  Th[1] = P1.Theta();
-  Th[2] = P2.Theta();
-  Ph[0] = PK.Phi();
-  Ph[1] = P1.Phi();
-  Ph[2] = P2.Phi();
-  P[0] = PK.P() * sin(Th[0]);
-  P[1] = P1.P() * sin(Th[1]);
-  P[2] = P2.P() * sin(Th[2]);
-
-  TMatrixD InvT(3, 3); //Inverted transform matrix (P, phi, theta)
-  double InvT_arr[9] = {cos(Ph[0]), sin(Ph[0]), 0,
-                        -sin(Ph[0]) / P[0], cos(Ph[0]) / P[0], 0,
-                        cos(Th[0]) * cos(Ph[0]) * sin(Th[0]) / P[0], cos(Th[0]) * sin(Th[0]) * sin(Ph[0]) / P[0], -sin(Th[0]) * sin(Th[0]) / P[0]};
-  InvT.SetMatrixArray(&InvT_arr[0]);
-
-  TMatrixD R(3, 6); //Right part (P, phi, theta)[1,2]
-  int j;
-  for (int i = 1; i <= 2; i++)
-  {
-    j = 3 * (i - 1);
-    R(0, j) = cos(Ph[i]);             // P/P1
-    R(1, j) = sin(Ph[i]);             // P/phi1
-    R(2, j) = 1 / tan(Th[i]);         // P/theta1
-    R(0, j + 1) = -P[i] * sin(Ph[i]); // phi/P1
-    R(1, j + 1) = P[i] * cos(Ph[i]);  // phi/phi1
-    R(2, j + 1) = 0;                  // phi/theta1
-    R(0, j + 2) = 0;
-    R(1, j + 2) = 0;
-    R(2, j + 2) = -P[i] / pow(sin(Th[i]), 2);
-  }
-
-  return InvT * R;
-}
-
 pair<double, double> psi_angle(double P_KS) //P [MeV]
 {
   //Landau: vol.2 p.56 ex.3
@@ -118,6 +78,41 @@ void MC::SetOutputPath(string key)
   return;
 }
 
+void MC::GetLuminosity(double& lum)
+{
+  lum = -1;
+  if (fChain == 0)
+    return;
+  Long64_t nentries = fChain->GetEntriesFast();
+  Long64_t nbytes = 0, nb = 0;
+
+  bool model = (fChain->GetMaximum("nsim") < 1) ? false : true;
+  if (model)
+    return;
+
+  int N_SOFT = 0;
+  double EMEAS = -1;
+  ofstream o(file.c_str());
+
+  for (Long64_t jentry = 0; jentry < nentries; jentry++)
+  {
+    Long64_t ientry = LoadTree(jentry);
+    if (ientry < 0)
+      break;
+    nb = fChain->GetEntry(jentry);
+    nbytes += nb;
+
+    if (jentry == 0)
+      EMEAS = emeas;
+
+    if (Cut(ientry) < 0)
+      continue;
+    N_SOFT++;
+  }
+  o << EMEAS << ',' << N_SOFT << endl;
+  return;
+}
+
 void MC::GetSoftPhotonsNumber(string file)
 {
   if (fChain == 0)
@@ -159,7 +154,7 @@ void MC::GetSoftPhotonsNumber(string file)
   return;
 }
 
-int MC::StandardProcedure(Long64_t entry, std::vector<int> goods)
+int MC::StandardProcedure(Long64_t entry, std::vector<int> goods, double& pks, double& mks)
 { //вернуть отрицательное значение, если не проходит отборы
 
   if (nks_total <= 0)
@@ -176,17 +171,19 @@ int MC::StandardProcedure(Long64_t entry, std::vector<int> goods)
     minDiv = fabs(ksminv[i] - mKs);
     bestKs = i;
   }
+  pks = ksalign[bestKs];
+  mks = ksminv[bestKs];
 
   if (ksvind[bestKs][0] > ksvind[bestKs][1]) // проверить, что первый записанный трек может быть больше второго (добавил на всякий случай)
     cout << "WARNING THERE: " << ksvind[bestKs][0] << '\t' << ksvind[bestKs][1] << endl;
   if (ksvind[bestKs][0] != goods[0] || ksvind[bestKs][1] != goods[1])
-    return -1; //если хоть один трек процедурного каона не совпадает с нашим хорошим, то к чёрту его
+    return -2; //если хоть один трек процедурного каона не совпадает с нашим хорошим, то к чёрту его
 
   if (ksalign[bestKs] < 0.8)
-    return -1; //отбор по косинусу между направлением импульса и направлением на пучок в р-фи плоскости
+    return -3; //отбор по косинусу между направлением импульса и направлением на пучок в р-фи плоскости
 
   if (fabs(ksptot[bestKs] - sqrt(emeas * emeas - mKs * mKs)) > P_CUT)
-    return -1; //отбор по импульсу каона
+    return -4; //отбор по импульсу каона
 
   return bestKs;
 }
@@ -338,12 +335,14 @@ void MC::Loop()
     EKS = -1;
     PKL = -1;
     PHEN = -1;
+    double pks = -1;
+    double mks = -1;
 
     //Kinfit
     PROCEDURE += Kinfit(ientry, goods, MASS_REC, CHI, EKS, PKL, PHEN);
 
     //Стандартная процедура
-    bestKs = model ? ((Cut(ientry) < 0) ? -1 : StandardProcedure(ientry, goods)) : StandardProcedure(ientry, goods); //Специальный отбор на мягкие фотоны для моделирования
+    bestKs = model ? ((Cut(ientry) < 0) ? -1 : StandardProcedure(ientry, goods, pks, mks)) : StandardProcedure(ientry, goods, pks, mks); //Специальный отбор на мягкие фотоны для моделирования
     if (bestKs >= 0)
     {
       PROCEDURE += 2;

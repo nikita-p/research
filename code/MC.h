@@ -94,7 +94,7 @@ public:
   Int_t tenconv[8];              //[nt]
   Int_t nks_total;
   Int_t nks;
-  Int_t ksvind[5][20];   //[nks]
+  Int_t ksvind[5][2];   //[nks]
   Int_t kstype[5];       //[nks]
   Int_t ksfstatus[5];    //[nks]
   Float_t ksvchi[5];     //[nks]
@@ -369,7 +369,7 @@ public:
   virtual Bool_t Notify();
   virtual void Show(Long64_t entry = -1);
   virtual std::vector<int> Good_tracks(Long64_t entry);                  //получить вектор с индексами хороших треков
-  virtual int StandardProcedure(Long64_t entry, std::vector<int> goods); //получить KS, который проходит стандартную процедуру отбора
+  virtual int StandardProcedure(Long64_t entry, std::vector<int> goods, double& pks, double& mks); //получить KS, который проходит стандартную процедуру отбора
   virtual double pidedx(double P, double dEdX);
   virtual int Kinfit(Long64_t entry, std::vector<int> goods, double &mass_rec, double &chi, double &energy, double& mom_kl, double& en_ph);
   virtual TLorentzVector VectorCreator(double P, double Theta, double Phi, double Mass);

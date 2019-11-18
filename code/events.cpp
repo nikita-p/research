@@ -75,12 +75,17 @@ public:
   {
     WashingFromFile(all19, "19");
   }
+  void WashingOth(string allOth)
+  {
+    WashingFromFile(allOth, "others");
+  }
 };
 
 void events()
 {
   TreeReader t;
-  t.WashingModel("../inputs/model/trees_old");
-  //t.Washing11("../inputs/11/trees");
+  t.WashingModel("../inputs/model/trees");
+  //t.Washing19("../inputs/19/trees");
+  //t.Washing12("../inputs/12/trees");
   return;
 }
