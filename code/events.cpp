@@ -43,6 +43,10 @@ public:
     string input;
     while (f >> input)
     {
+      if(input[0]=='#'){
+        cout << "Passed " << input << endl;
+        continue;
+      }
       cout << "Working at file: " << input << endl;
       Washing({input}, key, true);
       cout << "Well done" << endl
@@ -84,8 +88,8 @@ public:
 void events()
 {
   TreeReader t;
-  t.WashingModel("../inputs/model/trees");
-  //t.Washing19("../inputs/19/trees");
+  //t.WashingModel("../inputs/model/trees");
+  t.Washing19("../inputs/19/trees");
   //t.Washing12("../inputs/12/trees");
   return;
 }

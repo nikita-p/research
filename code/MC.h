@@ -369,9 +369,9 @@ public:
   virtual Bool_t Notify();
   virtual void Show(Long64_t entry = -1);
   virtual std::vector<int> Good_tracks(Long64_t entry);                  //получить вектор с индексами хороших треков
-  virtual int StandardProcedure(Long64_t entry, std::vector<int> goods, double& pks, double& mks); //получить KS, который проходит стандартную процедуру отбора
+  virtual int StandardProcedure(Long64_t entry, std::vector<int> goods, bool& passed_align, bool& passed_mom); //получить KS, который проходит стандартную процедуру отбора
   virtual double pidedx(double P, double dEdX);
-  virtual int Kinfit(Long64_t entry, std::vector<int> goods, double &mass_rec, double &chi, double &energy, double& mom_kl, double& en_ph);
+  virtual int Kinfit(Long64_t entry, std::vector<int> goods, double &mass_rec, double &chi2, double& en_ph, bool& pass_chi2, bool& pass_en);
   virtual TLorentzVector VectorCreator(double P, double Theta, double Phi, double Mass);
 };
 
