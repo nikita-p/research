@@ -170,7 +170,7 @@ int MC::Kinfit(Long64_t entry, std::vector<int> goods, double &mass_rec, double 
   KL = VectorCreator(KS.P(), TMath::Pi() - KS.Theta(), KS.Phi() + TMath::Pi(), mKs);
 
   TLorentzVector Photon;
-  double MIN_ANG = TMath::Infinity();
+  double MIN_ANG = 0.1;//TMath::Infinity();
   int bestPh = -1;
   double cluster_energy;
   double max_cluster_energy = -1;
@@ -181,7 +181,7 @@ int MC::Kinfit(Long64_t entry, std::vector<int> goods, double &mass_rec, double 
     cluster_energy = phen0[i];
     if(cluster_energy > max_cluster_energy)
       max_cluster_energy = cluster_energy;
-    if ((Photon.Angle(KL.Vect()) < MIN_ANG)&&(cluster_energy>100) )
+    if ((Photon.Angle(KL.Vect()) < MIN_ANG)&&(cluster_energy>1.1*(emeas-550)+100 ) )
     {
       MIN_ANG = Photon.Angle(KL.Vect());
       bestPh = i;
@@ -212,7 +212,7 @@ int MC::Kinfit(Long64_t entry, std::vector<int> goods, double &mass_rec, double 
   Par[1].P = PKS[1];
   Par[1].Cov = GetTrErrorMatrix(PKS[1], terr[goods[1]]);
   InParticles.push_back(Par[1]);
-
+/*
   float klerr[3][3];
   for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++)
@@ -220,9 +220,10 @@ int MC::Kinfit(Long64_t entry, std::vector<int> goods, double &mass_rec, double 
   klerr[0][0] = pow(35, 2);
   klerr[1][1] = pherr[bestPh][2];
   klerr[2][2] = pherr[bestPh][1];
-
+*/
   Par[2].P = KL;
-  Par[2].Cov = GetTrErrorMatrix(KL, klerr);
+  //Par[2].Cov = GetTrErrorMatrix(KL, klerr);
+  Par[2].Cov = GetPhErrorMatrix(KL, 2*KL.P(), pherr[bestPh][1], pherr[bestPh][2]);
   InParticles.push_back(Par[2]);
 
   chi2 = Cmd3KF(emeas, InParticles, OutParticles);
@@ -237,11 +238,12 @@ int MC::Kinfit(Long64_t entry, std::vector<int> goods, double &mass_rec, double 
     return 0;
   pass_chi2 = true;
 
-  //Проверить пространственный угол
+  //Проверить пространственный угол!! не факт, что нужно его проверять, поскольку у пионов как раз определены параметры неправильно 
+  /*  
   pair<double, double> ang = psi_angle(KS.P());
-  if (PKS[0].Angle(PKS[1].Vect()) < ang.first * 1.1 || PKS[0].Angle(PKS[1].Vect()) > ang.second * 0.9 ) //жёсткий кат
+  if (PKS[0].Angle(PKS[1].Vect()) < ang.first * 0.8 || PKS[0].Angle(PKS[1].Vect()) > ang.second * 1.2 ) //слабый кат
     return 0;
-
+  */ 
   return 1;
 }
 
@@ -267,6 +269,7 @@ void MC::Loop()
   int TRIGGER;        t->Branch("trigger", &TRIGGER, "t/I"); //номер сработавшего триггера
   double MASS;        t->Branch("mass", &MASS, "mass/D"); //масса из стандартной процедуры
   double MASS_REC;    t->Branch("mass_reco", &MASS_REC, "mass_reco/D"); //масса из кинфита
+  double ANGLE_KS;    t->Branch("angle_ks", &ANGLE_KS, "angle_ks/D"); //пространственный угол между KS и суммарным импульсом двух пионов
 
   //Организовать способ извлекать картинки
   TTree *pic_align = new TTree("pic_align", "Tree as a picture of align selection"); //отбор по косинусу
@@ -315,6 +318,7 @@ void MC::Loop()
 
     //инициализировать стандартными значениями переменные для дерева
     PROCEDURE = 0;
+    ANGLE_KS = -100;
     MASS = -1;
     MASS_REC = -1;
     double pks = -1;
@@ -333,6 +337,12 @@ void MC::Loop()
       MASS = ksminv[bestKs];
       MOMENTUM = ksptot[bestKs];
       ALIGN = ksalign[bestKs];
+      TLorentzVector KS = VectorCreator(ksptot[bestKs], ksth[bestKs], ksphi[bestKs], mKs);
+      int i1 = ksvind[bestKs][0];
+      int i2 = ksvind[bestKs][1];
+      TLorentzVector Pi1 = VectorCreator(tptot[i1], tth[i1], tphi[i1], mPi);
+      TLorentzVector Pi2 = VectorCreator(tptot[i2], tth[i2], tphi[i2], mPi);
+      ANGLE_KS = (Pi1+Pi2).Angle(KS.Vect());
       pic_mom->Fill();
       pic_align->Fill();
     }
