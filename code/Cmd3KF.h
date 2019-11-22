@@ -5,6 +5,7 @@
 #include "KinFitter/TFitParticlePThetaPhi.h"
 #include "KinFitter/TFitParticlePxPyPz.h"
 #include "KinFitter/TFitConstraintEp.h"
+#include "KinFitter/TFitConstraintMGaus.h"
 
 #include "TVector3.h"
 #include "TLorentzVector.h"

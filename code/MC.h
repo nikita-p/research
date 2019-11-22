@@ -27,8 +27,8 @@ class MC
 public:
 
   TTree* pic_kinfit; //picture of kinfit selection
-  double KL_EN, CHI2, ANGLE_DIFF, MOM_KS;
-  bool PASSED_KL, PASSED_CHI2, PASSED_ANGLE, PASSED_MOM;
+  double KL_EN, CHI2, ANGLE_DIFF, MOM_KS, MOM_SUM, MASS_REC;
+  bool PASSED_KL, PASSED_CHI2, PASSED_ANGLE, PASSED_MOM, PASSED_MOM_SUM;
 
   TTree *fChain;  //!pointer to the analyzed TTree or TChain
   Int_t fCurrent; //!current Tree number in a TChain
@@ -376,7 +376,7 @@ public:
   virtual std::vector<int> Good_tracks(Long64_t entry);                  //получить вектор с индексами хороших треков
   virtual int StandardProcedure(Long64_t entry, std::vector<int> goods, bool& passed_align, bool& passed_mom); //получить KS, который проходит стандартную процедуру отбора
   virtual double pidedx(double P, double dEdX);
-  virtual int Kinfit(Long64_t entry, std::vector<int> goods, double &mass_rec);
+  virtual int Kinfit(Long64_t entry, std::vector<int> goods);
   virtual TLorentzVector VectorCreator(double P, double Theta, double Phi, double Mass);
 };
 

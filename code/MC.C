@@ -155,7 +155,7 @@ int MC::StandardProcedure(Long64_t entry, std::vector<int> goods, bool &passed_a
   return bestKs;
 }
 
-int MC::Kinfit(Long64_t entry, std::vector<int> goods, double &mass_rec)
+int MC::Kinfit(Long64_t entry, std::vector<int> goods)
 { //Кин.фит
   PASSED_CHI2 = false;
   PASSED_KL = false;
@@ -163,6 +163,7 @@ int MC::Kinfit(Long64_t entry, std::vector<int> goods, double &mass_rec)
   CHI2 = -1;
   KL_EN = -1;
   ANGLE_DIFF = -1;
+  MASS_REC = -1;
 
   if (nph == 0)
     return 0; //если нет фотонов, то выкинуться
@@ -210,23 +211,27 @@ int MC::Kinfit(Long64_t entry, std::vector<int> goods, double &mass_rec)
   Par[2].Cov = GetPhErrorMatrix(kl, 1e5, pherr[best_cluster][1], pherr[best_cluster][2]);
   InParticles.push_back(Par[2]);
 
-  //CHI2 = Cmd3KF(emeas, InParticles, OutParticles);
-  CHI2 = 10;
-/*
+  CHI2 = Cmd3KF(emeas, InParticles, OutParticles);
+  //CHI2 = 10;
+  if(CHI2>=9e4) return 0;
+
+  
+  MOM_KS = ks.P();
+  MOM_SUM = (pion[0].P() + pion[1].P())/2.;
   ks = (OutParticles[0].P + OutParticles[1].P); //кинфитированный KS
   kl = OutParticles[2].P;                       //кинфитированный KL
   pion[0] = OutParticles[0].P;
-  pion[1] = OutParticles[1].P;*/
-  mass_rec = ks.M();
+  pion[1] = OutParticles[1].P;
   KL_EN = phen0[best_cluster];
-  MOM_KS = ks.P();
+  MASS_REC = ks.M();
 
   PASSED_KL = (KL_EN > 100) ? true : false; // 1.1 * (emeas - 550) + 100
-  PASSED_CHI2 = ((CHI2 > 0) && (CHI2 < 30)) ? true : false;
+  PASSED_CHI2 = ((CHI2 > 0) && (CHI2 < 100)) ? true : false;
   PASSED_ANGLE = (ANGLE_DIFF < 0.5) ? true : false;
   PASSED_MOM = ( fabs( MOM_KS - sqrt(emeas * emeas - mKs * mKs)) < 2 * (0.0869 * emeas - 36.53) ) ? true : false;
+  PASSED_MOM_SUM = ( fabs( sqrt(pow(emeas/2., 2.) - mPi*mPi) ) < 50 ) ? true : false;
 
-  if (PASSED_KL && PASSED_CHI2 && PASSED_ANGLE && PASSED_MOM)
+  if (PASSED_KL && PASSED_CHI2 && PASSED_ANGLE && PASSED_MOM && PASSED_MOM_SUM)
     return 1;
 
   return 0;
@@ -257,7 +262,6 @@ void MC::Loop()
   t->Branch("trigger", &TRIGGER, "t/I"); //номер сработавшего триггера
   double MASS;
   t->Branch("mass", &MASS, "mass/D"); //масса из стандартной процедуры
-  double MASS_REC;
   t->Branch("mass_reco", &MASS_REC, "mass_reco/D"); //масса из кинфита
   double ANGLE_KS;
   t->Branch("angle_ks", &ANGLE_KS, "angle_ks/D"); //пространственный угол между KS и суммарным импульсом двух пионов
@@ -283,6 +287,7 @@ void MC::Loop()
   pic_kinfit->Branch("angle_diff", &ANGLE_DIFF, "angle_diff/D");
   pic_kinfit->Branch("mass_reco", &MASS_REC, "mass_reco/D");
   pic_kinfit->Branch("mom_ks", &MOM_KS, "mom_ks/D");
+  pic_kinfit->Branch("mom_sum", &MOM_SUM, "mom_sum/D");
   pic_kinfit->Branch("passed_kl", &PASSED_KL, "passed_kl/O");
   pic_kinfit->Branch("passed_chi2", &PASSED_CHI2, "passed_chi2/O");
   pic_kinfit->Branch("passed_angle", &PASSED_ANGLE, "passed_angle/O");
@@ -315,12 +320,11 @@ void MC::Loop()
     PROCEDURE = 0;
     ANGLE_KS = -100;
     MASS = -1;
-    MASS_REC = -1;
     double pks = -1;
     double mks = -1;
 
     //Kinfit
-    PROCEDURE += Kinfit(ientry, goods, MASS_REC);
+    PROCEDURE += Kinfit(ientry, goods);
     pic_kinfit->Fill();
 
     //Стандартная процедура

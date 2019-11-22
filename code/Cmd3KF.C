@@ -16,6 +16,7 @@ double Cmd3KF(double EBeam, vector<KFParticle> &MeasParticle, vector<KFParticle>
   TFitConstraintEp pY("Py","Py conservation", 0, TFitConstraintEp::pY, 0.0);
   TFitConstraintEp pZ("Pz","Pz conservation", 0, TFitConstraintEp::pZ, 0.0);
   TFitConstraintEp  E("E" ,"E conservation" , 0, TFitConstraintEp::E, EBeam/500.0);
+  //TFitConstraintMGaus KMass("KMass", "KMass", 0, 0, 0.4976, 0.01);//
 
   for ( size_t i = 0; i < MeasParticle.size(); i++ ) {
 
@@ -31,11 +32,13 @@ double Cmd3KF(double EBeam, vector<KFParticle> &MeasParticle, vector<KFParticle>
 
     fitter.addMeasParticle(&FitParticle[i]);
   }
+  //KMass.addParticles1(&FitParticle[0], &FitParticle[1]);//
 
   fitter.addConstraint( &pX );
   fitter.addConstraint( &pY );
   fitter.addConstraint( &pZ );
   fitter.addConstraint( &E  );
+  //fitter.addConstraint( &KMass );//
 
   fitter.setMaxNbIter( 50 );
   fitter.setMaxDeltaS( 5e-5 );
