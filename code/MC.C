@@ -229,7 +229,7 @@ int MC::Kinfit(Long64_t entry, std::vector<int> goods)
   PASSED_CHI2 = ((CHI2 > 0) && (CHI2 < 100)) ? true : false;
   PASSED_ANGLE = (ANGLE_DIFF < 0.5) ? true : false;
   PASSED_MOM = ( fabs( MOM_KS - sqrt(emeas * emeas - mKs * mKs)) < 2 * (0.0869 * emeas - 36.53) ) ? true : false;
-  PASSED_MOM_SUM = ( fabs( sqrt(pow(emeas/2., 2.) - mPi*mPi) ) < 50 ) ? true : false;
+  PASSED_MOM_SUM = ( fabs( MOM_SUM - sqrt(pow(emeas/2., 2.) - mPi*mPi) ) < 50 ) ? true : false;
 
   if (PASSED_KL && PASSED_CHI2 && PASSED_ANGLE && PASSED_MOM && PASSED_MOM_SUM)
     return 1;
@@ -292,6 +292,7 @@ void MC::Loop()
   pic_kinfit->Branch("passed_chi2", &PASSED_CHI2, "passed_chi2/O");
   pic_kinfit->Branch("passed_angle", &PASSED_ANGLE, "passed_angle/O");
   pic_kinfit->Branch("passed_mom", &PASSED_MOM, "passed_mom/O");
+  pic_kinfit->Branch("passed_mom_sum", &PASSED_MOM_SUM, "passed_mom_sum/O");
 
   bool model = (fChain->GetMaximum("nsim") < 1) ? false : true;
   cout << "Is this model? " << (model ? "Yes" : "No") << endl;
