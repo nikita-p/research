@@ -284,15 +284,15 @@ void MC::Loop()
   pic_kinfit = new TTree("pic_kinfit", "Tree as a picture of kinfit selection"); //отборы в кинфите
   pic_kinfit->Branch("kl_en", &KL_EN, "kl_en/D");
   pic_kinfit->Branch("chi2", &CHI2, "chi2/D");
-  pic_kinfit->Branch("angle_diff", &ANGLE_DIFF, "angle_diff/D");
+  pic_kinfit->Branch("angle_diff", &ANGLE_DIFF, "angle_diff/D"); //пространственный угол между KL и ближайшим кластером
   pic_kinfit->Branch("mass_reco", &MASS_REC, "mass_reco/D");
   pic_kinfit->Branch("mom_ks", &MOM_KS, "mom_ks/D");
   pic_kinfit->Branch("mom_sum", &MOM_SUM, "mom_sum/D");
   pic_kinfit->Branch("passed_kl", &PASSED_KL, "passed_kl/O");
-  pic_kinfit->Branch("passed_chi2", &PASSED_CHI2, "passed_chi2/O");
-  pic_kinfit->Branch("passed_angle", &PASSED_ANGLE, "passed_angle/O");
-  pic_kinfit->Branch("passed_mom", &PASSED_MOM, "passed_mom/O");
-  pic_kinfit->Branch("passed_mom_sum", &PASSED_MOM_SUM, "passed_mom_sum/O");
+  pic_kinfit->Branch("passed_chi2", &PASSED_CHI2, "passed_chi2/O"); //bool по chi2
+  pic_kinfit->Branch("passed_angle", &PASSED_ANGLE, "passed_angle/O"); //bool по angle_diff
+  pic_kinfit->Branch("passed_mom", &PASSED_MOM, "passed_mom/O"); //bool по mom_ks
+  pic_kinfit->Branch("passed_mom_sum", &PASSED_MOM_SUM, "passed_mom_sum/O"); //bool по mom_sum
 
   bool model = (fChain->GetMaximum("nsim") < 1) ? false : true;
   cout << "Is this model? " << (model ? "Yes" : "No") << endl;
