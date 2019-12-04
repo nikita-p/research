@@ -32,13 +32,15 @@ class RadCor
     double ex, csx;
     while (!o.eof())
     {
-      o >> index >> ex >> csx;
+      o >> ex >> csx; //>> index >> ex >> csx;
       if (o.eof())
         break;
       e_cs.push_back(ex * 1e-3); //перевод энергии в ГэВ
       cs.push_back(csx);         //сечения в нб
     }
     cout << "Successful reading... Cross section File contains " << cs.size() << " records" << endl;
+    // for(auto it = cs.begin(); it!=cs.end(); it++)
+      // cout << *it << endl;
     return;
   }
 
@@ -122,6 +124,7 @@ class RadCor
     double pb = sqrt( s/4. - pow(0.4976, 2) );
     double dp = (2 * (0.0869 * emeas - 36.53))*1e-3;
     X1max = 2*( 1 - sqrt(1-2*pb*dp/s) ); //40e-3/sqrt(s); 
+    cout << "\nX1max: " << (X1max*sqrt(s))*1e3 << " MeV\n";
     X2max = 2*( 1 - sqrt(1-2*pb*dp/s) ); //40e-3/sqrt(s);
     //cout << emeas << '\t' << X1max << '\n';
 
