@@ -71,7 +71,7 @@ void MC::SetOutputPath(string key)
     nb = fChain->GetEntry(jentry);
     nbytes += nb;
 
-    snprintf(label, sizeof(label), "%.2f.root", ebeam);
+    snprintf(label, sizeof(label), "%.2f_%d.root", ebeam, runnum);
   }
   this->path = filepath + label;
   cout << "Out path: " << this->path << endl;
