@@ -123,9 +123,9 @@ class RadCor
     double emeas = (sqrt(s)/2.)*1e3;
     double pb = sqrt( s/4. - pow(0.4976, 2) );
     double dp = (2 * (0.0869 * emeas - 36.53))*1e-3;
-    X1max = 2*( 1 - sqrt(1-2*pb*dp/s) ); //40e-3/sqrt(s); 
-    cout << "\nX1max: " << (X1max*sqrt(s))*1e3 << " MeV\n";
-    X2max = 2*( 1 - sqrt(1-2*pb*dp/s) ); //40e-3/sqrt(s);
+    X1max = 2*( 1 - sqrt(1-8*pb*dp/s) );//2*( 1 - sqrt(1-2*pb*dp/s) ); //40e-3/sqrt(s); 
+    cout << "\ndE: " << (X1max*sqrt(s)/2.)*1e3 << " MeV\n";
+    X2max = 2*( 1 - sqrt(1-8*pb*dp/s) ); //40e-3/sqrt(s);
     //cout << emeas << '\t' << X1max << '\n';
 
     vector<int> Ns(4, 0);                      //вместо Nsim1, Nsim2, Nsim3, Nsim4;
