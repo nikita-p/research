@@ -30,6 +30,14 @@ public:
   double KL_EN, CHI2, ANGLE_DIFF, MOM_KS, MOM_SUM, MASS_REC;
   bool PASSED_KL, PASSED_CHI2, PASSED_ANGLE, PASSED_MOM, PASSED_MOM_SUM;
 
+  TTree *pic_align; //picture of align selection
+  TTree *pic_mom; //picture of momentum selection
+  double ALIGN, MASS_AM, MOMENTUM;
+
+  TTree *pic_dedx;
+  double DEDX[2], MOM_DEDX[2];
+  bool PASSED_DEDX;
+
   TTree *fChain;  //!pointer to the analyzed TTree or TChain
   Int_t fCurrent; //!current Tree number in a TChain
   string path;    //path to output file

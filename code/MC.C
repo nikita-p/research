@@ -144,6 +144,10 @@ int MC::StandardProcedure(Long64_t entry, std::vector<int> goods, bool &passed_a
   if (ksvind[bestKs][0] != goods[0] || ksvind[bestKs][1] != goods[1])
     return -1; //если хоть один трек процедурного каона не совпадает с нашим хорошим, то к чёрту его
 
+  MASS_AM = ksminv[bestKs];
+  ALIGN = ksalign[bestKs];
+  MOMENTUM = ksptot[bestKs];
+
   if (ksalign[bestKs] < 0.8)
     return -1; //отбор по косинусу между направлением импульса и направлением на пучок в р-фи плоскости
   passed_align = true;
@@ -267,19 +271,22 @@ void MC::Loop()
   t->Branch("angle_ks", &ANGLE_KS, "angle_ks/D"); //пространственный угол между KS и суммарным импульсом двух пионов
 
   //Организовать способ извлекать картинки
-  TTree *pic_align = new TTree("pic_align", "Tree as a picture of align selection"); //отбор по косинусу
-  double ALIGN;
+  pic_align = new TTree("pic_align", "Tree as a picture of align selection"); //отбор по косинусу
   pic_align->Branch("align", &ALIGN, "align/D");
-  pic_align->Branch("mass", &MASS, "mass/D");
+  pic_align->Branch("mass", &MASS_AM, "mass/D");
   bool PASSED_A;
   pic_align->Branch("passed", &PASSED_A, "passed/O");
 
-  TTree *pic_mom = new TTree("pic_mom", "Tree as a picture of momentum selection"); //отбор по импульсу
-  double MOMENTUM;
+  pic_mom = new TTree("pic_mom", "Tree as a picture of momentum selection"); //отбор по импульсу
   pic_mom->Branch("momentum", &MOMENTUM, "momentum/D");
-  pic_mom->Branch("mass", &MASS, "mass/D");
+  pic_mom->Branch("mass", &MASS_AM, "mass/D");
   bool PASSED_M;
   pic_mom->Branch("passed", &PASSED_M, "passed/O");
+
+  pic_dedx = new TTree("pic_dedx", "Tree as a picture of dedx selection"); //отбор по ионизационным потерям
+  pic_dedx->Branch("dedx", &DEDX, "dedx[2]/D");
+  pic_dedx->Branch("mom", &MOM_DEDX, "mom[2]/D");
+  pic_dedx->Branch("passed", &PASSED_DEDX, "passed/O");
 
   pic_kinfit = new TTree("pic_kinfit", "Tree as a picture of kinfit selection"); //отборы в кинфите
   pic_kinfit->Branch("kl_en", &KL_EN, "kl_en/D");
@@ -305,8 +312,20 @@ void MC::Loop()
     nb = fChain->GetEntry(jentry);
     nbytes += nb;
 
+    //картинка dedx
+    if((nt==2) && (jentry<3e5)){ //слишком много данных, надо бы уменьшить
+      PASSED_DEDX = false;
+      for(int i=0; i<2; i++){
+        DEDX[i] = tdedx[i];
+        MOM_DEDX[i] = tptot[i]; 
+      }
+      if( (fabs(pidedx(tptot[0], tdedx[0])) < 2000)&&(fabs(pidedx(tptotv[1], tdedx[1])) < 2000) )
+        PASSED_DEDX = true;
+      pic_dedx->Fill();
+    }
+
     //Общие условия
-    goods = Good_tracks(ientry);
+    goods = Good_tracks(ientry); //!!! изменить tptotV -> tptot !!!WARNING
     if (goods.size() != 2)
       continue; //2 хороших трека
 
@@ -329,21 +348,22 @@ void MC::Loop()
     pic_kinfit->Fill();
 
     //Стандартная процедура
+    MASS_AM = -1;
     bestKs = model ? ((Cut(ientry) < 0) ? -1 : StandardProcedure(ientry, goods, PASSED_A, PASSED_M)) : StandardProcedure(ientry, goods, PASSED_A, PASSED_M); //Специальный отбор на мягкие фотоны для моделирования
+    if(MASS_AM>-1){
+      pic_mom->Fill();
+      pic_align->Fill();
+    }
     if (bestKs >= 0)
     {
       PROCEDURE += 2;
       MASS = ksminv[bestKs];
-      MOMENTUM = ksptot[bestKs];
-      ALIGN = ksalign[bestKs];
       TLorentzVector KS = VectorCreator(ksptot[bestKs], ksth[bestKs], ksphi[bestKs], mKs);
       int i1 = ksvind[bestKs][0];
       int i2 = ksvind[bestKs][1];
       TLorentzVector Pi1 = VectorCreator(tptot[i1], tth[i1], tphi[i1], mPi);
       TLorentzVector Pi2 = VectorCreator(tptot[i2], tth[i2], tphi[i2], mPi);
       ANGLE_KS = (Pi1 + Pi2).Angle(KS.Vect());
-      pic_mom->Fill();
-      pic_align->Fill();
     }
 
     if (PROCEDURE > 0)
