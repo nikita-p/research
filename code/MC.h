@@ -26,17 +26,18 @@ class MC
 {
 public:
 
+  TTree *t; //main tree
+  int PROCEDURE, TRIGGER;
+  double MASS, MASS_REC, ANGLE_KS;
+
   TTree* pic_kinfit; //picture of kinfit selection
-  double KL_EN, CHI2, ANGLE_DIFF, MOM_KS, MOM_SUM, MASS_REC;
+  double KL_EN, CHI2, ANGLE_DIFF, MOM_KS, MOM_SUM;
   bool PASSED_KL, PASSED_CHI2, PASSED_ANGLE, PASSED_MOM, PASSED_MOM_SUM;
 
   TTree *pic_align; //picture of align selection
   TTree *pic_mom; //picture of momentum selection
-  double ALIGN, MASS_AM, MOMENTUM;
-
-  TTree *pic_dedx;
-  double DEDX[2], MOM_DEDX[2];
-  bool PASSED_DEDX;
+  double ALIGN, MOMENTUM;
+  bool PASSED_A, PASSED_M;
 
   TTree *fChain;  //!pointer to the analyzed TTree or TChain
   Int_t fCurrent; //!current Tree number in a TChain
@@ -382,7 +383,7 @@ public:
   virtual Bool_t Notify();
   virtual void Show(Long64_t entry = -1);
   virtual std::vector<int> Good_tracks(Long64_t entry);                  //получить вектор с индексами хороших треков
-  virtual int StandardProcedure(Long64_t entry, std::vector<int> goods, bool& passed_align, bool& passed_mom); //получить KS, который проходит стандартную процедуру отбора
+  virtual int StandardProcedure(Long64_t entry, std::vector<int> goods); //получить KS, который проходит стандартную процедуру отбора
   virtual double pidedx(double P, double dEdX);
   virtual int Kinfit(Long64_t entry, std::vector<int> goods);
   virtual TLorentzVector VectorCreator(double P, double Theta, double Phi, double Mass);
@@ -645,19 +646,19 @@ Int_t MC::Cut(Long64_t entry)
   // returns  1 if entry is accepted.
   // returns -1 otherwise.
   double P_CUT = 2 * (0.0869 * emeas - 36.53);
-  double SOFT_PHOTONS_MOMENTUM = 0;
+  double KS_SIM_MOMENTUM = 0;
   int j = 0;
   for (int i = 0; i < nsim; i++)
   {
     if ((simtype[i] == 310) && (simorig[i] == 0))
     {
-      SOFT_PHOTONS_MOMENTUM += simmom[i];
+      KS_SIM_MOMENTUM += simmom[i];
       j++;
     }
     if (j == 2)
-      cout << "Warning\n";
+      cout << "Warning!!!!! This entry has more than one KS sim event\n";
   }
-  if (TMath::Abs(SOFT_PHOTONS_MOMENTUM - sqrt(emeas * emeas - 497.614 * 497.614)) > P_CUT)
+  if (TMath::Abs(KS_SIM_MOMENTUM - sqrt(emeas * emeas - 497.614 * 497.614)) > P_CUT)
     return -1; //если импульс KS в событии отличается от импульсе, при энергии KS равной энергии пучка больше чем на P_CUT, то не работать с ним
   return 1;
 }

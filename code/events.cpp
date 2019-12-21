@@ -88,8 +88,8 @@ public:
 void events()
 {
   TreeReader t;
-  //t.WashingModel("../inputs/model_new/trees");
-  t.Washing19("../inputs/19/trees");
+  t.WashingModel("../inputs/model_new/trees");
+  // t.Washing19("../inputs/19/trees");
   //t.Washing12("../inputs/12/trees");
   return;
 }

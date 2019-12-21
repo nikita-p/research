@@ -22,28 +22,6 @@ TLorentzVector MC::VectorCreator(double P, double Theta, double Phi, double Mass
   return V;
 }
 
-pair<double, double> psi_angle(double P_KS) //P [MeV]
-{
-  //Landau: vol.2 p.56 ex.3
-  pair<double, double> p;
-  double V = P_KS / sqrt(P_KS * P_KS + mKs * mKs);               //KS speed in Lab System
-  double v0 = sqrt(pow(mKs / 2., 2) - pow(mPi, 2)) / (mKs / 2.); //Pi speed in center-of-mass
-
-  if (V < v0)
-  {
-    p = {2 * atan((v0 / V) * sqrt(1 - V * V)), TMath::Pi()};
-    return p;
-  }
-  if (V > v0 && V < (v0 / sqrt(1 - v0 * v0)))
-  {
-    p = {0, asin(sqrt((1 - V * V) / (1 - v0 * v0)))};
-    return p;
-  }
-  p = {0, 2 * atan((v0 / V) * sqrt(1 - V * V))};
-
-  return p;
-}
-
 double MC::pidedx(double P, double dEdX) //calculate dEdX for pions
 {
   double pidedx = 5.58030e+9 / pow(P + 40., 3) + 2.21228e+3 - 3.77103e-1 * P - dEdX;
@@ -119,13 +97,15 @@ void MC::GetSoftPhotonsNumber(string file)
   return;
 }
 
-int MC::StandardProcedure(Long64_t entry, std::vector<int> goods, bool &passed_align, bool &passed_mom)
+int MC::StandardProcedure(Long64_t entry, std::vector<int> goods)
 { //вернуть отрицательное значение, если не проходит отборы
-  passed_align = false;
-  passed_mom = false;
+  MASS = -1;
+  ANGLE_KS = -1;
+  PASSED_A = false;
+  PASSED_M = false;
 
   if (nks_total <= 0)
-    return -1; //нет каонов - нет и отбора
+    return 0; //нет каонов - нет и отбора
 
   double P_CUT = 2 * (0.0869 * emeas - 36.53); //для каждой энергии кат по импульсу(энергии) теперь будет различаться
   double minDiv = TMath::Infinity();
@@ -139,24 +119,33 @@ int MC::StandardProcedure(Long64_t entry, std::vector<int> goods, bool &passed_a
     bestKs = i;
   }
 
+  if ((ksvind[bestKs][0] >= nt) || (ksvind[bestKs][1] >= nt)) //проверить, что в ksvind записана не дичь
+    cout << "ksvind WARNING: nt=" << nt << "\tksvind0=" << ksvind[bestKs][0] << "\tksvind1=" << ksvind[bestKs][1] << endl;
   if (ksvind[bestKs][0] > ksvind[bestKs][1]) // проверить, что первый записанный трек может быть больше второго (добавил на всякий случай)
     cout << "WARNING THERE: " << ksvind[bestKs][0] << '\t' << ksvind[bestKs][1] << endl;
   if (ksvind[bestKs][0] != goods[0] || ksvind[bestKs][1] != goods[1])
     return -1; //если хоть один трек процедурного каона не совпадает с нашим хорошим, то к чёрту его
 
-  MASS_AM = ksminv[bestKs];
+  MASS = ksminv[bestKs];
   ALIGN = ksalign[bestKs];
   MOMENTUM = ksptot[bestKs];
 
-  if (ksalign[bestKs] < 0.8)
-    return -1; //отбор по косинусу между направлением импульса и направлением на пучок в р-фи плоскости
-  passed_align = true;
+  PASSED_A = (ksalign[bestKs] > 0.8) ? true : false;                                          //отбор по косинусу между направлением импульса и направлением на пучок в р-фи плоскости
+  PASSED_M = (fabs(ksptot[bestKs] - sqrt(emeas * emeas - mKs * mKs)) < P_CUT) ? true : false; //отбор по импульсу каона
 
-  if (fabs(ksptot[bestKs] - sqrt(emeas * emeas - mKs * mKs)) > P_CUT)
-    return -1; //отбор по импульсу каона
-  passed_mom = true;
+  TLorentzVector KS = VectorCreator(ksptot[bestKs], ksth[bestKs], ksphi[bestKs], mKs);
+  int i1 = ksvind[bestKs][0];
+  int i2 = ksvind[bestKs][1];
+  TLorentzVector Pi1 = VectorCreator(tptot[i1], tth[i1], tphi[i1], mPi);
+  TLorentzVector Pi2 = VectorCreator(tptot[i2], tth[i2], tphi[i2], mPi);
+  ANGLE_KS = (Pi1 + Pi2).Angle(KS.Vect());
 
-  return bestKs;
+  pic_align->Fill();
+  pic_mom->Fill();
+
+  if (PASSED_A && PASSED_M)
+    return 1;
+  return 0;
 }
 
 int MC::Kinfit(Long64_t entry, std::vector<int> goods)
@@ -216,12 +205,9 @@ int MC::Kinfit(Long64_t entry, std::vector<int> goods)
   InParticles.push_back(Par[2]);
 
   CHI2 = Cmd3KF(emeas, InParticles, OutParticles);
-  //CHI2 = 10;
-  if(CHI2>=9e4) return 0;
 
-  
   MOM_KS = ks.P();
-  MOM_SUM = (pion[0].P() + pion[1].P())/2.;
+  MOM_SUM = (pion[0].P() + pion[1].P()) / 2.;
   ks = (OutParticles[0].P + OutParticles[1].P); //кинфитированный KS
   kl = OutParticles[2].P;                       //кинфитированный KL
   pion[0] = OutParticles[0].P;
@@ -232,8 +218,10 @@ int MC::Kinfit(Long64_t entry, std::vector<int> goods)
   PASSED_KL = (KL_EN > 100) ? true : false; // 1.1 * (emeas - 550) + 100
   PASSED_CHI2 = ((CHI2 > 0) && (CHI2 < 100)) ? true : false;
   PASSED_ANGLE = (ANGLE_DIFF < 0.5) ? true : false;
-  PASSED_MOM = ( fabs( MOM_KS - sqrt(emeas * emeas - mKs * mKs)) < 2 * (0.0869 * emeas - 36.53) ) ? true : false;
-  PASSED_MOM_SUM = ( fabs( MOM_SUM - sqrt(pow(emeas/2., 2.) - mPi*mPi) ) < 50 ) ? true : false;
+  PASSED_MOM = (fabs(MOM_KS - sqrt(emeas * emeas - mKs * mKs)) < 2 * (0.0869 * emeas - 36.53)) ? true : false;
+  PASSED_MOM_SUM = (fabs(MOM_SUM - sqrt(pow(emeas / 2., 2.) - mPi * mPi)) < 50) ? true : false;
+
+  pic_kinfit->Fill();
 
   if (PASSED_KL && PASSED_CHI2 && PASSED_ANGLE && PASSED_MOM && PASSED_MOM_SUM)
     return 1;
@@ -254,39 +242,25 @@ void MC::Loop()
   std::vector<int> goods;
   int bestKs;
 
-  TTree *t = new TTree("t", "Tree for invariant mass without energy cut");
-  double LABEL;
-  t->Branch("label", &LABEL, "label/D"); //метка дерева (номинальная энергия)
-  double BEAM_ENERGY;
-  t->Branch("beam_energy", &BEAM_ENERGY, "beam_energy/D"); //реальная энергия (по комптону)
-  int PROCEDURE;
+  t = new TTree("t", "Tree for invariant mass without energy cut");
+  t->Branch("label", &ebeam, "label/D");             //метка дерева (номинальная энергия)
+  t->Branch("beam_energy", &emeas, "beam_energy/D"); //реальная энергия (по комптону)
   t->Branch("procedure", &PROCEDURE, "procedure/I"); //метка процедуры, через которую прошло событие (1-standard, 2-kinfit, 3-both)
+  t->Branch("trigger", &TRIGGER, "t/I");             //номер сработавшего триггера
+  t->Branch("mass", &MASS, "mass/D");                //масса из стандартной процедуры
+  t->Branch("mass_reco", &MASS_REC, "mass_reco/D");  //масса из кинфита
+  t->Branch("angle_ks", &ANGLE_KS, "angle_ks/D");    //пространственный угол между KS и суммарным импульсом двух пионов
 
-  int TRIGGER;
-  t->Branch("trigger", &TRIGGER, "t/I"); //номер сработавшего триггера
-  double MASS;
-  t->Branch("mass", &MASS, "mass/D"); //масса из стандартной процедуры
-  t->Branch("mass_reco", &MASS_REC, "mass_reco/D"); //масса из кинфита
-  double ANGLE_KS;
-  t->Branch("angle_ks", &ANGLE_KS, "angle_ks/D"); //пространственный угол между KS и суммарным импульсом двух пионов
-
-  //Организовать способ извлекать картинки
+  //Способ извлекать картинки
   pic_align = new TTree("pic_align", "Tree as a picture of align selection"); //отбор по косинусу
   pic_align->Branch("align", &ALIGN, "align/D");
-  pic_align->Branch("mass", &MASS_AM, "mass/D");
-  bool PASSED_A;
+  pic_align->Branch("mass", &MASS, "mass/D");
   pic_align->Branch("passed", &PASSED_A, "passed/O");
 
   pic_mom = new TTree("pic_mom", "Tree as a picture of momentum selection"); //отбор по импульсу
   pic_mom->Branch("momentum", &MOMENTUM, "momentum/D");
-  pic_mom->Branch("mass", &MASS_AM, "mass/D");
-  bool PASSED_M;
+  pic_mom->Branch("mass", &MASS, "mass/D");
   pic_mom->Branch("passed", &PASSED_M, "passed/O");
-
-  pic_dedx = new TTree("pic_dedx", "Tree as a picture of dedx selection"); //отбор по ионизационным потерям
-  pic_dedx->Branch("dedx", &DEDX, "dedx[2]/D");
-  pic_dedx->Branch("mom", &MOM_DEDX, "mom[2]/D");
-  pic_dedx->Branch("passed", &PASSED_DEDX, "passed/O");
 
   pic_kinfit = new TTree("pic_kinfit", "Tree as a picture of kinfit selection"); //отборы в кинфите
   pic_kinfit->Branch("kl_en", &KL_EN, "kl_en/D");
@@ -296,9 +270,9 @@ void MC::Loop()
   pic_kinfit->Branch("mom_ks", &MOM_KS, "mom_ks/D");
   pic_kinfit->Branch("mom_sum", &MOM_SUM, "mom_sum/D");
   pic_kinfit->Branch("passed_kl", &PASSED_KL, "passed_kl/O");
-  pic_kinfit->Branch("passed_chi2", &PASSED_CHI2, "passed_chi2/O"); //bool по chi2
-  pic_kinfit->Branch("passed_angle", &PASSED_ANGLE, "passed_angle/O"); //bool по angle_diff
-  pic_kinfit->Branch("passed_mom", &PASSED_MOM, "passed_mom/O"); //bool по mom_ks
+  pic_kinfit->Branch("passed_chi2", &PASSED_CHI2, "passed_chi2/O");          //bool по chi2
+  pic_kinfit->Branch("passed_angle", &PASSED_ANGLE, "passed_angle/O");       //bool по angle_diff
+  pic_kinfit->Branch("passed_mom", &PASSED_MOM, "passed_mom/O");             //bool по mom_ks
   pic_kinfit->Branch("passed_mom_sum", &PASSED_MOM_SUM, "passed_mom_sum/O"); //bool по mom_sum
 
   bool model = (fChain->GetMaximum("nsim") < 1) ? false : true;
@@ -312,18 +286,6 @@ void MC::Loop()
     nb = fChain->GetEntry(jentry);
     nbytes += nb;
 
-    //картинка dedx
-    if((nt==2) && (jentry<3e5)){ //слишком много данных, надо бы уменьшить
-      PASSED_DEDX = false;
-      for(int i=0; i<2; i++){
-        DEDX[i] = tdedx[i];
-        MOM_DEDX[i] = tptot[i]; 
-      }
-      if( (fabs(pidedx(tptot[0], tdedx[0])) < 2000)&&(fabs(pidedx(tptotv[1], tdedx[1])) < 2000) )
-        PASSED_DEDX = true;
-      pic_dedx->Fill();
-    }
-
     //Общие условия
     goods = Good_tracks(ientry); //!!! изменить tptotV -> tptot !!!WARNING
     if (goods.size() != 2)
@@ -332,39 +294,16 @@ void MC::Loop()
     if (tcharge[goods[0]] + tcharge[goods[1]] != 0)
       continue; //если суммарный заряд ненулевой, то выкинуться
 
-    LABEL = ebeam;
-    BEAM_ENERGY = emeas;
     TRIGGER = trigbits - 1;
 
     //инициализировать стандартными значениями переменные для дерева
     PROCEDURE = 0;
-    ANGLE_KS = -100;
-    MASS = -1;
-    double pks = -1;
-    double mks = -1;
 
     //Kinfit
     PROCEDURE += Kinfit(ientry, goods);
-    pic_kinfit->Fill();
 
     //Стандартная процедура
-    MASS_AM = -1;
-    bestKs = model ? ((Cut(ientry) < 0) ? -1 : StandardProcedure(ientry, goods, PASSED_A, PASSED_M)) : StandardProcedure(ientry, goods, PASSED_A, PASSED_M); //Специальный отбор на мягкие фотоны для моделирования
-    if(MASS_AM>-1){
-      pic_mom->Fill();
-      pic_align->Fill();
-    }
-    if (bestKs >= 0)
-    {
-      PROCEDURE += 2;
-      MASS = ksminv[bestKs];
-      TLorentzVector KS = VectorCreator(ksptot[bestKs], ksth[bestKs], ksphi[bestKs], mKs);
-      int i1 = ksvind[bestKs][0];
-      int i2 = ksvind[bestKs][1];
-      TLorentzVector Pi1 = VectorCreator(tptot[i1], tth[i1], tphi[i1], mPi);
-      TLorentzVector Pi2 = VectorCreator(tptot[i2], tth[i2], tphi[i2], mPi);
-      ANGLE_KS = (Pi1 + Pi2).Angle(KS.Vect());
-    }
+    PROCEDURE += 2 * (model ? ((Cut(ientry) < 0) ? 0 : StandardProcedure(ientry, goods)) : StandardProcedure(ientry, goods)); //Специальный отбор на мягкие фотоны для моделирования
 
     if (PROCEDURE > 0)
       t->Fill();
