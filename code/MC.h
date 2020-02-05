@@ -25,17 +25,21 @@
 class MC
 {
 public:
+  double BEAM_ENERGY, LABEL;
 
   TTree *t; //main tree
   int PROCEDURE, TRIGGER;
   double MASS, MASS_REC, ANGLE_KS;
 
-  TTree* pic_kinfit; //picture of kinfit selection
+  TTree* sys; //systematic errors tree
+  bool SYS;
+
+  TTree *pic_kinfit; //picture of kinfit selection
   double KL_EN, CHI2, ANGLE_DIFF, MOM_KS, MOM_SUM;
   bool PASSED_KL, PASSED_CHI2, PASSED_ANGLE, PASSED_MOM, PASSED_MOM_SUM;
 
   TTree *pic_align; //picture of align selection
-  TTree *pic_mom; //picture of momentum selection
+  TTree *pic_mom;   //picture of momentum selection
   double ALIGN, MOMENTUM;
   bool PASSED_A, PASSED_M;
 
@@ -108,7 +112,7 @@ public:
   Int_t tenconv[8];              //[nt]
   Int_t nks_total;
   Int_t nks;
-  Int_t ksvind[5][2];   //[nks]
+  Int_t ksvind[5][2];    //[nks]
   Int_t kstype[5];       //[nks]
   Int_t ksfstatus[5];    //[nks]
   Float_t ksvchi[5];     //[nks]
@@ -385,6 +389,7 @@ public:
   virtual std::vector<int> Good_tracks(Long64_t entry);                  //получить вектор с индексами хороших треков
   virtual int StandardProcedure(Long64_t entry, std::vector<int> goods); //получить KS, который проходит стандартную процедуру отбора
   virtual double pidedx(double P, double dEdX);
+  virtual double Pcut(double Ebeam);
   virtual int Kinfit(Long64_t entry, std::vector<int> goods);
   virtual TLorentzVector VectorCreator(double P, double Theta, double Phi, double Mass);
 };
@@ -640,12 +645,12 @@ void MC::Show(Long64_t entry)
     return;
   fChain->Show(entry);
 }
-Int_t MC::Cut(Long64_t entry)
+Int_t MC::Cut(Long64_t entry) //WARNING я могу обрезать что-то хорошее!!!
 {
   // This function may be called from Loop.
   // returns  1 if entry is accepted.
   // returns -1 otherwise.
-  double P_CUT = 2 * (0.0869 * emeas - 36.53);
+  double P_CUT = Pcut(emeas);
   double KS_SIM_MOMENTUM = 0;
   int j = 0;
   for (int i = 0; i < nsim; i++)
@@ -669,13 +674,13 @@ std::vector<int> MC::Good_tracks(Long64_t entry)
   for (int i = 0; i < nt; i++)
   { //пробегаем по всем трекам из события, яхууу
 
-    if (fabs(tz[i]) > 10.0)
+    if (fabs(tz[i]) > 10.0) //origin: 10;
       continue; //вылетел из пучка
     if (tchi2r[i] > 30.0)
       continue; // хи2 хороший
     if (tchi2z[i] > 25.0)
       continue;
-    if ((tth[i] > (TMath::Pi() - 0.6)) || (tth[i] < 0.6))
+    if ((tth[i] > (TMath::Pi() - 0.6)) || (tth[i] < 0.6))  //origin: 0.6;
       continue; //летит в детектор
     if (tptotv[i] < 40.)
       continue; //меньшие импульсы непригодны, т.к. треки закрутятся в дк
@@ -683,9 +688,9 @@ std::vector<int> MC::Good_tracks(Long64_t entry)
       continue; //куда ж ещё больше
     if (tnhit[i] < 6)
       continue; //5 уравнений - 5 неизвестных: phi, theta, P, ...  -->>-- я добавил по сравн. с пред. версией 1 хит (стало 6)
-    if (fabs(pidedx(tptotv[i], tdedx[i])) > 2000)
-      continue; //ионизационные потери
-    if (fabs(trho[i]) < 0.1)
+    if (fabs(pidedx(tptotv[i], tdedx[i])) > 2000) //origin: 2000
+        continue; //ионизационные потери
+    if (fabs(trho[i]) < 0.1) //origin: 0.1
       continue; //отбор по прицельному параметру
 
     goods.push_back(i);

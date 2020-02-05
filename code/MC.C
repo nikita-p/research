@@ -28,9 +28,14 @@ double MC::pidedx(double P, double dEdX) //calculate dEdX for pions
   return pidedx;
 }
 
+double MC::Pcut(double Ebeam) //Mev
+{
+  return 2 * (0.0869 * Ebeam - 36.53);
+}
+
 void MC::SetOutputPath(string key)
 {
-  string filepath = "../outputs/" + key + "/";
+  string filepath = "../outputs/" + key + "/trees/";
   if (fChain == 0)
   {
     this->path = (filepath + "failed.root");
@@ -70,6 +75,7 @@ void MC::GetSoftPhotonsNumber(string file)
   int N_SOFT = 0;
   double EMEAS = -1;
   ofstream o(file.c_str());
+  o << "label,lum\n";
 
   for (Long64_t jentry = 0; jentry < nentries; jentry++)
   {
@@ -107,7 +113,7 @@ int MC::StandardProcedure(Long64_t entry, std::vector<int> goods)
   if (nks_total <= 0)
     return 0; //нет каонов - нет и отбора
 
-  double P_CUT = 2 * (0.0869 * emeas - 36.53); //для каждой энергии кат по импульсу(энергии) теперь будет различаться
+  double P_CUT = Pcut(emeas); //для каждой энергии кат по импульсу(энергии) теперь будет различаться //origin: Pcut(emeas)
   double minDiv = TMath::Infinity();
 
   int bestKs = -1; //пора искать лучший каон. Из всех, найденных процедурой, найдём лучший, с инв.массой наиболее близкой к массе каона.
@@ -130,7 +136,7 @@ int MC::StandardProcedure(Long64_t entry, std::vector<int> goods)
   ALIGN = ksalign[bestKs];
   MOMENTUM = ksptot[bestKs];
 
-  PASSED_A = (ksalign[bestKs] > 0.8) ? true : false;                                          //отбор по косинусу между направлением импульса и направлением на пучок в р-фи плоскости
+  PASSED_A = (ksalign[bestKs] > 0.8) ? true : false;    //origin: 0.8                                      //отбор по косинусу между направлением импульса и направлением на пучок в р-фи плоскости
   PASSED_M = (fabs(ksptot[bestKs] - sqrt(emeas * emeas - mKs * mKs)) < P_CUT) ? true : false; //отбор по импульсу каона
 
   TLorentzVector KS = VectorCreator(ksptot[bestKs], ksth[bestKs], ksphi[bestKs], mKs);
@@ -243,13 +249,13 @@ void MC::Loop()
   int bestKs;
 
   t = new TTree("t", "Tree for invariant mass without energy cut");
-  t->Branch("label", &ebeam, "label/D");             //метка дерева (номинальная энергия)
-  t->Branch("beam_energy", &emeas, "beam_energy/D"); //реальная энергия (по комптону)
-  t->Branch("procedure", &PROCEDURE, "procedure/I"); //метка процедуры, через которую прошло событие (1-standard, 2-kinfit, 3-both)
-  t->Branch("trigger", &TRIGGER, "t/I");             //номер сработавшего триггера
-  t->Branch("mass", &MASS, "mass/D");                //масса из стандартной процедуры
-  t->Branch("mass_reco", &MASS_REC, "mass_reco/D");  //масса из кинфита
-  t->Branch("angle_ks", &ANGLE_KS, "angle_ks/D");    //пространственный угол между KS и суммарным импульсом двух пионов
+  t->Branch("label", &LABEL, "label/D");                   //метка дерева (номинальная энергия)
+  t->Branch("beam_energy", &BEAM_ENERGY, "beam_energy/D"); //реальная энергия (по комптону)
+  t->Branch("procedure", &PROCEDURE, "procedure/I");       //метка процедуры, через которую прошло событие (1-standard, 2-kinfit, 3-both)
+  t->Branch("trigger", &TRIGGER, "t/I");                   //номер сработавшего триггера
+  t->Branch("mass", &MASS, "mass/D");                      //масса из стандартной процедуры
+  t->Branch("mass_reco", &MASS_REC, "mass_reco/D");        //масса из кинфита
+  t->Branch("angle_ks", &ANGLE_KS, "angle_ks/D");          //пространственный угол между KS и суммарным импульсом двух пионов
 
   //Способ извлекать картинки
   pic_align = new TTree("pic_align", "Tree as a picture of align selection"); //отбор по косинусу
@@ -278,6 +284,7 @@ void MC::Loop()
   bool model = (fChain->GetMaximum("nsim") < 1) ? false : true;
   cout << "Is this model? " << (model ? "Yes" : "No") << endl;
 
+  SYS = false;
   for (Long64_t jentry = 0; jentry < nentries; jentry++)
   {
     Long64_t ientry = LoadTree(jentry);
@@ -286,6 +293,9 @@ void MC::Loop()
     nb = fChain->GetEntry(jentry);
     nbytes += nb;
 
+    
+    BEAM_ENERGY = emeas;
+    LABEL = ebeam;
     //Общие условия
     goods = Good_tracks(ientry); //!!! изменить tptotV -> tptot !!!WARNING
     if (goods.size() != 2)
@@ -300,7 +310,7 @@ void MC::Loop()
     PROCEDURE = 0;
 
     //Kinfit
-    PROCEDURE += Kinfit(ientry, goods);
+    // PROCEDURE += Kinfit(ientry, goods); //вернуть kinfit на место (пока я с ним не работаю, пусть отдыхает)
 
     //Стандартная процедура
     PROCEDURE += 2 * (model ? ((Cut(ientry) < 0) ? 0 : StandardProcedure(ientry, goods)) : StandardProcedure(ientry, goods)); //Специальный отбор на мягкие фотоны для моделирования
