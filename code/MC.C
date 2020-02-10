@@ -67,7 +67,7 @@ void MC::GetSoftPhotonsNumber(string file)
     return;
   Long64_t nentries = fChain->GetEntriesFast();
   Long64_t nbytes = 0, nb = 0;
-
+  
   bool model = (fChain->GetMaximum("nsim") < 1) ? false : true;
   if (!model)
     return;

@@ -27,21 +27,22 @@ class HandleTree:
     def p_ideal(self, E):
         return np.sqrt(E**2 - self.mks**2)
 
-    def __init__(self, path):
+    def __init__(self, path, MC_soft=False):
         self.path = path
         self.ks = None
         self.tracks = None
         self.result = None
-        
+        self.MC_soft = MC_soft
+
     def open_file(self):
-        print('Open file...', self.path)
-        df = uproot.open(self.path)['tr_ph']
+        df = uproot.open(self.path, xrootdsource={'parallel': True})['tr_ph']
+        print('Opening file...', self.path)
         self.tracks = df.pandas.df(branches=['tptot', 'nt', 'tdedx', 'tz', 'tth', 'tphi', 'tnhit', \
                                               'tchi2r', 'tchi2z', 'trho', 'emeas'])
         print('Tracks block is ready.')
-        self.ks = df.pandas.df(branches=['nks', 'ksptot', 'ksth', 'ksphi', 'ksminv', 'emeas', 'ksalign', 'ksvind'])
+        self.ks = df.pandas.df(branches=['nks', 'ksptot', 'ksminv', 'emeas', 'ksalign', 'ksvind', 'trigbits', 'ebeam'])
         print('KS block is ready.')
-        self.sim = df.pandas.df(branches=['emeas', 'simtype', 'nsim', 'simorig', 'simmom'])
+        self.sim = df.pandas.df(branches=['emeas', 'simtype', 'nsim', 'simorig', 'simmom']) if self.MC_soft else None
         print('Generator block is ready.')
 
         print('File has been opened.')
@@ -95,11 +96,15 @@ class HandleTree:
         
     def merge(self):
         print('Two tables merging...')
+        
+        print('Tracks block len', self.tracks.shape[0])       
+        print('KS block len', self.ks.shape[0])
+        
         good_tracks_indexes = pd.DataFrame( self.tracks.to_records() ).set_index('entry').\
                                         groupby('entry').agg(ksvind_0 = ('subentry', 'min'),\
                                                              ksvind_1 = ('subentry','max') )
         self.result = pd.merge(good_tracks_indexes, self.ks, on=['entry', 'ksvind_0', 'ksvind_1'])
-        self.result.drop(['ksvind_0', 'ksvind_1'], axis=1, inplace=True)
+        self.result.drop(['ksvind_0', 'ksvind_1', 'ksptot', 'ksalign'], axis=1, inplace=True)
         
         return
     
@@ -117,15 +122,13 @@ class HandleTree:
         self.sim = self.sim.reset_index().set_index('entry').drop(['subentry'], axis=1)
         return
         
-    def analyze(self, MC_soft=False):
+    def analyze(self):
         self.open_file()
         self.two_good_tracks_events()
         self.good_ks()
         self.merge()
         
-        self.result = self.result.assign(total_num = \
-                                        len( set( map(lambda x: x[0], self.sim.index) ) ))
-        if MC_soft:
+        if self.MC_soft:
             self.soft_photon_events()
             self.result = self.result.loc[self.sim.index & self.result.index]
             self.result = self.result.assign(total_soft_num = self.sim.shape[0])
@@ -136,3 +139,9 @@ class HandleTree:
         self.result.to_csv(filename, index=False)
         print('File has been saved in', filename)
         return
+        
+def pool_func(filename):
+    a = HandleTree(filename, False)
+    a.analyze()
+    a.save_csv('outputs/2017/')
+    return

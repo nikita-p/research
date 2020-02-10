@@ -657,7 +657,7 @@ Int_t MC::Cut(Long64_t entry) //WARNING я могу обрезать что-то
   {
     if ((simtype[i] == 310) && (simorig[i] == 0))
     {
-      KS_SIM_MOMENTUM += simmom[i];
+      KS_SIM_MOMENTUM += simmom[i]>1 ? simmom[i] : simmom[i]*1000; //В моделировании new_v6 импульсы в ГэВ
       j++;
     }
     if (j == 2)
@@ -684,11 +684,11 @@ std::vector<int> MC::Good_tracks(Long64_t entry)
       continue; //летит в детектор
     if (tptotv[i] < 40.)
       continue; //меньшие импульсы непригодны, т.к. треки закрутятся в дк
-    if (tptotv[i] > 2 * ebeam)
+    if (tptotv[i] > 1.1 * ebeam)
       continue; //куда ж ещё больше
-    if (tnhit[i] < 6)
+    if (tnhit[i] <= 6)
       continue; //5 уравнений - 5 неизвестных: phi, theta, P, ...  -->>-- я добавил по сравн. с пред. версией 1 хит (стало 6)
-    if (fabs(pidedx(tptotv[i], tdedx[i])) > 2000) //origin: 2000
+    if (fabs(pidedx(tptot[i], tdedx[i])) > 2000) //origin: 2000, tptotv
         continue; //ионизационные потери
     if (fabs(trho[i]) < 0.1) //origin: 0.1
       continue; //отбор по прицельному параметру

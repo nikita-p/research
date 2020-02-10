@@ -55,19 +55,27 @@ public:
     return;
   }
 
-  void WashingModelOld(string allModels)
+  void WashingModelOldv6(string allModels)
   {
-    WashingFromFile(allModels, "model_old");
-    MC cl(allModels, "model_old");
-    cl.GetSoftPhotonsNumber("../outputs/model_old/soft_ph.csv");
+    WashingFromFile(allModels, "model_old_v6");
+    MC cl(allModels, "model_old_v6");
+    cl.GetSoftPhotonsNumber("../outputs/model_old_v6/soft_ph.csv");
     return;
   }
   
-  void WashingModelNew(string allModels)
+  void WashingModelOldv7(string allModels)
   {
-    WashingFromFile(allModels, "model_new");
-    MC cl(allModels, "model_new");
-    cl.GetSoftPhotonsNumber("../outputs/model_new/soft_ph.csv");
+    WashingFromFile(allModels, "model_old_v7");
+    MC cl(allModels, "model_old_v7");
+    cl.GetSoftPhotonsNumber("../outputs/model_old_v7/soft_ph.csv");
+    return;
+  }
+  
+  void WashingModelNewv6(string allModels)
+  {
+    WashingFromFile(allModels, "model_new_v6");
+    MC cl(allModels, "model_new_v6");
+    cl.GetSoftPhotonsNumber("../outputs/model_new_v6/soft_ph.csv");
     return;
   }
 
@@ -96,8 +104,9 @@ public:
 void events()
 {
   TreeReader t;
-  t.WashingModelOld("../inputs/model_old/trees");
-  // t.Washing19("../inputs/19/trees");
-  t.Washing11("../inputs/11/trees");
+  //t.WashingModelOldv6("../inputs/model_old_v6/trees");
+  //t.WashingModelNewv6("../inputs/model_new_v6/trees");
+  t.Washing12("../inputs/12/trees");
+  //t.Washing11("../inputs/11/trees");
   return;
 }
