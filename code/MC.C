@@ -149,8 +149,10 @@ int MC::StandardProcedure(Long64_t entry, std::vector<int> goods)
   pic_align->Fill();
   pic_mom->Fill();
 
-  if (PASSED_A && PASSED_M)
-    return 1;
+  if (PASSED_A && PASSED_M){
+    if(Cut(entry)<1)
+      cout << "W\n";
+    return 1;}
   return 0;
 }
 
@@ -313,7 +315,7 @@ void MC::Loop()
     // PROCEDURE += Kinfit(ientry, goods); //вернуть kinfit на место (пока я с ним не работаю, пусть отдыхает)
 
     //Стандартная процедура
-    PROCEDURE += 2 * (model ? ((Cut(ientry) < 0) ? 0 : StandardProcedure(ientry, goods)) : StandardProcedure(ientry, goods)); //Специальный отбор на мягкие фотоны для моделирования
+    PROCEDURE += 2 * StandardProcedure(ientry, goods);
 
     if (PROCEDURE > 0)
       t->Fill();

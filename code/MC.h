@@ -645,27 +645,22 @@ void MC::Show(Long64_t entry)
     return;
   fChain->Show(entry);
 }
-Int_t MC::Cut(Long64_t entry) //WARNING я могу обрезать что-то хорошее!!!
+Int_t MC::Cut(Long64_t entry)
 {
   // This function may be called from Loop.
   // returns  1 if entry is accepted.
   // returns -1 otherwise.
-  double P_CUT = Pcut(emeas);
-  double KS_SIM_MOMENTUM = 0;
-  int j = 0;
-  for (int i = 0; i < nsim; i++)
-  {
-    if ((simtype[i] == 310) && (simorig[i] == 0))
-    {
-      KS_SIM_MOMENTUM += simmom[i]>1 ? simmom[i] : simmom[i]*1000; //В моделировании new_v6 импульсы в ГэВ
-      j++;
-    }
-    if (j == 2)
-      cout << "Warning!!!!! This entry has more than one KS sim event\n";
-  }
-  if (TMath::Abs(KS_SIM_MOMENTUM - sqrt(emeas * emeas - 497.614 * 497.614)) > P_CUT)
-    return -1; //если импульс KS в событии отличается от импульсе, при энергии KS равной энергии пучка больше чем на P_CUT, то не работать с ним
+  double s = TMath::Power(2*emeas*1e-3, 2);
+  double pb = sqrt( s/4. - pow(0.497614, 2) );
+  double dp = ( Pcut(emeas) + 10 )*1e-3; //добавка, чтоб с большей вероятностью охватить область событий
+  double X = 2*( 1 - sqrt(1-(8*pb*dp - 4*dp*dp)/s) );
+  double Ephoton_max = X*emeas*1e-3;//new_v6 (GeV)
+  for( int i=0; i<nsim; i++){
+    if((simtype[i]==22)&&(simorig[i]==0))
+      if(simmom[i]>Ephoton_max)
+        return -1;}
   return 1;
+
 }
 
 std::vector<int> MC::Good_tracks(Long64_t entry)
@@ -682,9 +677,9 @@ std::vector<int> MC::Good_tracks(Long64_t entry)
       continue;
     if ((tth[i] > (TMath::Pi() - 0.6)) || (tth[i] < 0.6))  //origin: 0.6;
       continue; //летит в детектор
-    if (tptotv[i] < 40.)
+    if (tptot[i] < 40.)
       continue; //меньшие импульсы непригодны, т.к. треки закрутятся в дк
-    if (tptotv[i] > 1.1 * ebeam)
+    if (tptot[i] > 1.1 * ebeam)
       continue; //куда ж ещё больше
     if (tnhit[i] <= 6)
       continue; //5 уравнений - 5 неизвестных: phi, theta, P, ...  -->>-- я добавил по сравн. с пред. версией 1 хит (стало 6)

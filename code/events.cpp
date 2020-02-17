@@ -73,7 +73,7 @@ public:
   
   void WashingModelNewv6(string allModels)
   {
-    WashingFromFile(allModels, "model_new_v6");
+    //WashingFromFile(allModels, "model_new_v6");
     MC cl(allModels, "model_new_v6");
     cl.GetSoftPhotonsNumber("../outputs/model_new_v6/soft_ph.csv");
     return;
@@ -105,8 +105,8 @@ void events()
 {
   TreeReader t;
   //t.WashingModelOldv6("../inputs/model_old_v6/trees");
-  //t.WashingModelNewv6("../inputs/model_new_v6/trees");
-  t.Washing12("../inputs/12/trees");
+  t.WashingModelNewv6("../inputs/model_new_v6/trees");
+  //t.Washing12("../inputs/12/trees");
   //t.Washing11("../inputs/11/trees");
   return;
 }

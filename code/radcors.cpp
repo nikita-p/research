@@ -21,9 +21,10 @@ class RadCor
   vector<double> rad_cors; //рад. поправки, которые считаются
 
   double Delta = 1e-5;
-  int NSim = 1e5;
+  int NSim = 1e6; //реально определяется в самом низу как аргумент функции
   double X1max = 0.99; //
   double X2max = 0.99; //
+  bool soft;
 
   void ReadCrossSec(string CSFile)
   {
@@ -32,7 +33,7 @@ class RadCor
     double ex, csx;
     while (!o.eof())
     {
-      o >> ex >> csx; //>> index >> ex >> csx;
+      o >> index >> ex >> csx;
       if (o.eof())
         break;
       e_cs.push_back(ex * 1e-3); //перевод энергии в ГэВ
@@ -62,6 +63,8 @@ class RadCor
   double CrossSection(double s)
   {
     double E = sqrt(s);
+    if(E!=E) // NaN/infinity check
+      return 0;
 
     int i = int((e_cs.size() + 1) / 2.);
     int step = int(i / 2.);
@@ -81,6 +84,7 @@ class RadCor
       i = 1;
     double cross = cs[i - 1] + (cs[i] - cs[i - 1]) * (E - e_cs[i - 1]) / (e_cs[i] - e_cs[i - 1]);
     cross = (cross > 0) ? cross : 0;
+ 
     return cross;
   }
 
@@ -121,11 +125,14 @@ class RadCor
   void ComputeOne(double s) //GeV^2
   {
     double emeas = (sqrt(s)/2.)*1e3;
-    double pb = sqrt( s/4. - pow(0.4976, 2) );
-    double dp = (2 * (0.0869 * emeas - 36.53))*1e-3;
-    X1max = 2*( 1 - sqrt(1-8*pb*dp/s) );//2*( 1 - sqrt(1-2*pb*dp/s) ); //40e-3/sqrt(s); 
+    double pb = sqrt( s/4. - pow(0.497614, 2) );
+    double dp = (2 * (0.0869 * emeas - 36.53) + 10)*1e-3; //должно совпадать с PCut в MC.C
+    double Xsoft = 2*( 1 - sqrt(1-(8*pb*dp - 4*dp*dp)/s) );
+    double Xall = 1;
+
+    X1max = this->soft ? Xsoft : Xall;
     cout << "\ndE: " << (X1max*sqrt(s)/2.)*1e3 << " MeV\n";
-    X2max = 2*( 1 - sqrt(1-8*pb*dp/s) ); //40e-3/sqrt(s);
+    X2max = X1max;
     //cout << emeas << '\t' << X1max << '\n';
 
     vector<int> Ns(4, 0);                      //вместо Nsim1, Nsim2, Nsim3, Nsim4;
@@ -159,7 +166,9 @@ class RadCor
 
       Part[1] = Temp2 * D0 * (TMath::Power(X1max, Beta / 2.0) - Temp2) * D_Func(Z1, s) * CrossSection(s * Z1) * K_Factor;
       Max[1] = (Part[1] > Max[1]) ? Part[1] : Max[1];
-
+    }
+    for (int i = 0; i < NSim; i++)
+    {
       //3 area
       X2 = TMath::Power(gRandom->Rndm() * (TMath::Power(X2max, Beta / 2.0) - Temp2) + Temp2, 2.0 / Beta);
       Z2 = 1.0 - X2;
@@ -169,7 +178,9 @@ class RadCor
 
       Part[2] = Temp2 * D0 * (TMath::Power(X2max, Beta / 2.0) - Temp2) * D_Func(Z2, s) * CrossSection(s * Z2) * K_Factor;
       Max[2] = (Part[2] > Max[2]) ? Part[2] : Max[2];
-
+    }
+    for (int i = 0; i < NSim; i++)
+    {
       //4 area
       X1 = TMath::Power(gRandom->Rndm() * (TMath::Power(X1max, Beta / 2.0) - Temp2) + Temp2, 2.0 / Beta);
       Z1 = 1.0 - X1;
@@ -194,7 +205,7 @@ class RadCor
       Z1 = 1.0 - X1;
       if (s * Z1 < Threshold * Threshold)
         continue;
-      Part[1] = Temp2 * D0 * (TMath::Power(X1max, Beta / 2.0) - Temp2) * D_Func(Z1, s) * CrossSection(s * Z1);
+      Part[1] = Temp2 * D0 * (TMath::Power(X1max, Beta / 2.0) - Temp2) * D_Func(Z1, s) * CrossSection(s * Z1 * (1.0 - Delta));
       if (gRandom->Rndm() * Max[1] < Part[1])
         Ns[1] += 1;
     }
@@ -205,7 +216,7 @@ class RadCor
       Z2 = 1.0 - X2;
       if (s * Z2 < Threshold * Threshold)
         continue;
-      Part[2] = Temp2 * D0 * (TMath::Power(X2max, Beta / 2.0) - Temp2) * D_Func(Z2, s) * CrossSection(s * Z2);
+      Part[2] = Temp2 * D0 * (TMath::Power(X2max, Beta / 2.0) - Temp2) * D_Func(Z2, s) * CrossSection(s * Z2 * (1.0 - Delta));
       if (gRandom->Rndm() * Max[2] < Part[2])
         Ns[2] += 1;
     }
@@ -214,7 +225,7 @@ class RadCor
     {
       X1 = TMath::Power(gRandom->Rndm() * (TMath::Power(X1max, Beta / 2.0) - Temp2) + Temp2, 2.0 / Beta);
       Z1 = 1.0 - X1;
-      X2m = min(X2max, 1.0 - Threshold * Threshold / s / (1 - X1));
+      X2m = X2max;//min(X2max, 1.0 - Threshold * Threshold / s / (1 - X1));
       X2 = TMath::Power(gRandom->Rndm() * (TMath::Power(X2m, Beta / 2.0) - Temp2) + Temp2, 2.0 / Beta);
       Z2 = 1.0 - X2;
       if (s * Z1 * Z2 < Threshold * Threshold)
@@ -224,11 +235,11 @@ class RadCor
         Ns[3] += 1;
     }
 
-    for (int i = 0; i < 4; i++)
-    {
+    for (int i = 0; i < 4; i++){
       Sigma[i] = Max[i] * Ns[i] / NSim;
-      //cout << "Max" << i << ": " <<  Max[i] << endl;
+      cout << Sigma[i] << '\t';
     }
+    cout << endl;
 
     double Sigma0 = Sigma[0] + Sigma[1] + Sigma[2] + Sigma[3];
 
@@ -272,7 +283,7 @@ class RadCor
   }
 
 public:
-  RadCor(string energies, string CSFile, double EThreshold)
+  RadCor(string energies, string CSFile, double EThreshold, bool soft=true)
   {
     Threshold = EThreshold; //GeV
     cout << "EnergyFile name is " << energies << endl;
@@ -280,6 +291,7 @@ public:
     cout << "Cross Section File Name is " << CSFile << endl;
     ReadCrossSec(CSFile);
     ReadEnergies(energies);
+    this->soft = soft;
   }
 
   void PrintEnergies()
@@ -324,8 +336,12 @@ public:
 
 int radcors()
 {
-  RadCor rc("../inputs/radcors/energies.dat", "../inputs/radcors/cs.dat", 0.9952);
-  rc.SetNSim(1e5);
-  rc.Calc("../outputs/radcors.dat");
+  RadCor rc("../inputs/radcors/energies.dat", "../cs_klks_nikitap", 0.9952, false);//"../inputs/radcors/cs.dat", 0.9952);
+  rc.SetNSim(1e6);
+  rc.Calc("../uproot/Journal/outputs/data/radcors_all.dat");//"../outputs/radcors.dat");
+
+  // RadCor rc2("../inputs/radcors/energies.dat", "../cs_klks_nikitap", 0.9952, true);
+  // rc2.SetNSim(1e5);
+  // rc2.Calc("../uproot/Journal/outputs/data/radcors_soft.dat");
   return 0;
 }
