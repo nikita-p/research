@@ -1,5 +1,5 @@
 #include <TMath.h>
-#include <TRandom.h>
+#include <TRandom3.h>
 #include <TComplex.h>
 
 #include <string>
@@ -20,6 +20,7 @@ class RadCor
   vector<double> e_out;    //энергии, которые нам нужны
   vector<double> rad_cors; //рад. поправки, которые считаются
 
+  double l, b;
   double Delta = 1e-5;
   int NSim = 1e6; //реально определяется в самом низу как аргумент функции
   double X1max = 0.99; //
@@ -84,7 +85,7 @@ class RadCor
       i = 1;
     double cross = cs[i - 1] + (cs[i] - cs[i - 1]) * (E - e_cs[i - 1]) / (e_cs[i] - e_cs[i - 1]);
     cross = (cross > 0) ? cross : 0;
- 
+
     return cross;
   }
 
@@ -122,6 +123,56 @@ class RadCor
     return fval;
   }
 
+  double F(double x, double s){
+    double a = Alpha;
+    double p = TMath::Pi();
+    double m = 0.511e-3; //GeV
+    double E = TMath::Sqrt(s)/2.; //GeV
+    double F1 = b*TMath::Power(x, b-1)*( 1 + (a/p)*(p*p/3. - 1./2) + 3*b/4. - (b*b/24.)*(l/3. + 2*p*p - 37/4.) );
+    double F2 = -b*(1 - x/2.);
+    double F3 = (b*b/8.)*(4*(2-x)*TMath::Log(1./x) + (1./x)*(1+3*TMath::Power(1-x,2))*TMath::Log(1./(1-x)) - 6 + x);
+
+    double F4 = 0;
+    if(x>2*m/E){
+      double T1 = TMath::Power(x-2*m/E, b)/(6*x);
+      double T2 = TMath::Power( TMath::Log(s*x*x/m/m) - 5./3. ,2.);
+      double T3 = 2 - 2*x + x*x + (b/3.)*(TMath::Log(s*x*x/m/m) - 5./3.);
+      double T4 = (l*l/2.)*( (2./3.)*(1-TMath::Power(1-x,3.))/(1-x) - (2-x)*TMath::Log(1./(1.-x)) + x/2. );
+      F4 = TMath::Power(a/p, 2)*( (T1 * T2 * T3) + T4 );
+    }
+    return F1 + F2 + F3 + F4;
+  }
+
+  void ComputeOneWithF(double s) //not tested
+  {
+    double emeas = (sqrt(s)/2.)*1e3;
+    double pb = sqrt( s/4. - pow(0.497614, 2) );
+    double dp = (2 * (0.0869 * emeas - 36.53) + 10)*1e-3; //должно совпадать с PCut в MC.C
+    double Xsoft = 2*( 1 - sqrt(1-(8*pb*dp - 4*dp*dp)/s) );
+
+    double Xm = this->soft ? Xsoft : 1;
+    double Xmax = min(Xm, 1-Threshold*Threshold/s);
+    double Xmin = 5e-3/emeas;
+    double x, cs0;
+    double CS = 0;
+
+    this->l = L_Func(s);
+    this->b = B_Func(L_Func(s));
+    TRandom3 myRandom(0);
+    for( int i=0; i<NSim; i++)
+    {
+      x =( myRandom.Rndm() )*Xmax;
+      if(x<Xmin)
+        continue;
+        // x=Xmin/2;
+      CS += F(x, s)*CrossSection(s*(1-x));
+    }
+    double rad = CS*Xmax/NSim/CrossSection(s);
+    rad_cors.push_back(rad);
+    cout << "Radiative correction at E = " << sqrt(s) << " GeV is equal to " << rad << endl;
+    return;
+  }
+
   void ComputeOne(double s) //GeV^2
   {
     double emeas = (sqrt(s)/2.)*1e3;
@@ -131,6 +182,7 @@ class RadCor
     double Xall = 1;
 
     X1max = this->soft ? Xsoft : Xall;
+    cout << "\nDelta_dE: " << Delta*emeas << " MeV";
     cout << "\ndE: " << (X1max*sqrt(s)/2.)*1e3 << " MeV\n";
     X2max = X1max;
     //cout << emeas << '\t' << X1max << '\n';
@@ -241,7 +293,7 @@ class RadCor
     }
     cout << endl;
 
-    double Sigma0 = Sigma[0] + Sigma[1] + Sigma[2] + Sigma[3];
+    double Sigma0 = Sigma[0] + Sigma[1] + Sigma[2] + Sigma[3]; //WWWWARNING!!
 
     double RadiativeCorrection;
 
@@ -340,8 +392,8 @@ int radcors()
   rc.SetNSim(1e6);
   rc.Calc("../uproot/Journal/outputs/data/radcors_all.dat");//"../outputs/radcors.dat");
 
-  // RadCor rc2("../inputs/radcors/energies.dat", "../cs_klks_nikitap", 0.9952, true);
-  // rc2.SetNSim(1e5);
-  // rc2.Calc("../uproot/Journal/outputs/data/radcors_soft.dat");
+  RadCor rc2("../inputs/radcors/energies.dat", "../cs_klks_nikitap", 0.9952, true);
+  rc2.SetNSim(1e6);
+  rc2.Calc("../uproot/Journal/outputs/data/radcors_soft.dat");
   return 0;
 }

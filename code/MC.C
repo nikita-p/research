@@ -150,8 +150,8 @@ int MC::StandardProcedure(Long64_t entry, std::vector<int> goods)
   pic_mom->Fill();
 
   if (PASSED_A && PASSED_M){
-    if(Cut(entry)<1)
-      cout << "W\n";
+    // if(Cut(entry)<1)
+      // cout << "W\n";
     return 1;}
   return 0;
 }
@@ -312,7 +312,7 @@ void MC::Loop()
     PROCEDURE = 0;
 
     //Kinfit
-    // PROCEDURE += Kinfit(ientry, goods); //вернуть kinfit на место (пока я с ним не работаю, пусть отдыхает)
+    PROCEDURE += Kinfit(ientry, goods); //вернуть kinfit на место (пока я с ним не работаю, пусть отдыхает)
 
     //Стандартная процедура
     PROCEDURE += 2 * StandardProcedure(ientry, goods);

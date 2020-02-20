@@ -655,10 +655,12 @@ Int_t MC::Cut(Long64_t entry)
   double dp = ( Pcut(emeas) + 10 )*1e-3; //добавка, чтоб с большей вероятностью охватить область событий
   double X = 2*( 1 - sqrt(1-(8*pb*dp - 4*dp*dp)/s) );
   double Ephoton_max = X*emeas*1e-3;//new_v6 (GeV)
-  for( int i=0; i<nsim; i++){
+  for( int i=0; i<nsim; i++)
     if((simtype[i]==22)&&(simorig[i]==0))
-      if(simmom[i]>Ephoton_max)
-        return -1;}
+    {
+      if(simmom[i]>Ephoton_max) 
+        return -1;
+    }
   return 1;
 
 }
