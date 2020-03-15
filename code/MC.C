@@ -35,7 +35,7 @@ double MC::Pcut(double Ebeam) //Mev
 
 void MC::SetOutputPath(string key)
 {
-  string filepath = "../outputs/" + key + "/trees/";
+  string filepath = (string)"../outputs/" + key + "/trees" + (SYS ? "_sys" : "") + "/";
   if (fChain == 0)
   {
     this->path = (filepath + "failed.root");
@@ -135,9 +135,14 @@ int MC::StandardProcedure(Long64_t entry, std::vector<int> goods)
   MASS = ksminv[bestKs];
   ALIGN = ksalign[bestKs];
   MOMENTUM = ksptot[bestKs];
+  THETA_KS = ksth[bestKs];
+  PHI_KS = ksphi[bestKs];
 
-  PASSED_A = (ksalign[bestKs] > 0.8) ? true : false;    //origin: 0.8                                      //отбор по косинусу между направлением импульса и направлением на пучок в р-фи плоскости
-  PASSED_M = (fabs(ksptot[bestKs] - sqrt(emeas * emeas - mKs * mKs)) < P_CUT) ? true : false; //отбор по импульсу каона
+  PASSED_A = (ksalign[bestKs] > (SYS ? 0.75 : 0.8) ) ? true : false;    //origin: 0.8                                      //отбор по косинусу между направлением импульса и направлением на пучок в р-фи плоскости
+  if(emeas < mKs )
+      PASSED_M = false;
+  else
+      PASSED_M = (fabs(ksptot[bestKs] - sqrt(emeas * emeas - mKs * mKs)) < P_CUT) ? true : false; //отбор по импульсу каона
 
   TLorentzVector KS = VectorCreator(ksptot[bestKs], ksth[bestKs], ksphi[bestKs], mKs);
   int i1 = ksvind[bestKs][0];
@@ -237,6 +242,15 @@ int MC::Kinfit(Long64_t entry, std::vector<int> goods)
   return 0;
 }
 
+void MC::FillSimParticles(Long64_t entry, std::vector<double> *simparticles)
+{
+  simparticles->clear();
+  for(int i=0; i<nsim; i++)
+    if( (simorig[i]==0)&&(simtype[i]!=22) )
+      simparticles->push_back( simtype[i] );
+  return;
+}
+
 void MC::Loop()
 {
   if (fChain == 0)
@@ -258,6 +272,9 @@ void MC::Loop()
   t->Branch("mass", &MASS, "mass/D");                      //масса из стандартной процедуры
   t->Branch("mass_reco", &MASS_REC, "mass_reco/D");        //масса из кинфита
   t->Branch("angle_ks", &ANGLE_KS, "angle_ks/D");          //пространственный угол между KS и суммарным импульсом двух пионов
+  t->Branch("theta_ks", &THETA_KS, "theta_ks/D");          //полярный угол KS из стандартной процедуры
+  t->Branch("phi_ks", &PHI_KS, "phi_ks/D");          //азимутальный угол KS из стандартной процедуры
+  
 
   //Способ извлекать картинки
   pic_align = new TTree("pic_align", "Tree as a picture of align selection"); //отбор по косинусу
@@ -266,6 +283,7 @@ void MC::Loop()
   pic_align->Branch("passed", &PASSED_A, "passed/O");
 
   pic_mom = new TTree("pic_mom", "Tree as a picture of momentum selection"); //отбор по импульсу
+  pic_mom->Branch("align", &ALIGN, "align/D");
   pic_mom->Branch("momentum", &MOMENTUM, "momentum/D");
   pic_mom->Branch("mass", &MASS, "mass/D");
   pic_mom->Branch("passed", &PASSED_M, "passed/O");
@@ -285,8 +303,14 @@ void MC::Loop()
 
   bool model = (fChain->GetMaximum("nsim") < 1) ? false : true;
   cout << "Is this model? " << (model ? "Yes" : "No") << endl;
+  
+  std::vector<double> *st = new std::vector<double>(); 
+  if(model){
+    pic_mom->Branch("simtypes","vector<double>",&st);
+  }
 
   SYS = false;
+  double SYM_TYPES[10];
   for (Long64_t jentry = 0; jentry < nentries; jentry++)
   {
     Long64_t ientry = LoadTree(jentry);
@@ -294,7 +318,9 @@ void MC::Loop()
       break;
     nb = fChain->GetEntry(jentry);
     nbytes += nb;
-
+    
+    if(model)
+        FillSimParticles(ientry, st);
     
     BEAM_ENERGY = emeas;
     LABEL = ebeam;
@@ -312,7 +338,7 @@ void MC::Loop()
     PROCEDURE = 0;
 
     //Kinfit
-    PROCEDURE += Kinfit(ientry, goods); //вернуть kinfit на место (пока я с ним не работаю, пусть отдыхает)
+//     PROCEDURE += Kinfit(ientry, goods); //вернуть kinfit на место (пока я с ним не работаю, пусть отдыхает)
 
     //Стандартная процедура
     PROCEDURE += 2 * StandardProcedure(ientry, goods);
@@ -321,5 +347,6 @@ void MC::Loop()
       t->Fill();
   }
   f->Write();
+  delete st;
   return;
 }

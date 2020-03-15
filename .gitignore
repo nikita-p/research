@@ -1,0 +1,7 @@
+*.sh
+*.so
+*.d
+*.pcm
+nohup.out
+*.root
+.ipynb_checkpoints

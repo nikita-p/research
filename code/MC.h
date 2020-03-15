@@ -25,14 +25,12 @@
 class MC
 {
 public:
+  bool SYS;
   double BEAM_ENERGY, LABEL;
 
   TTree *t; //main tree
   int PROCEDURE, TRIGGER;
-  double MASS, MASS_REC, ANGLE_KS;
-
-  TTree* sys; //systematic errors tree
-  bool SYS;
+  double MASS, MASS_REC, ANGLE_KS, THETA_KS, PHI_KS;
 
   TTree *pic_kinfit; //picture of kinfit selection
   double KL_EN, CHI2, ANGLE_DIFF, MOM_KS, MOM_SUM;
@@ -61,9 +59,6 @@ public:
   Int_t trigmchs;
   Float_t trigtime;
   Float_t time;
-  Float_t dcfittime;
-  Float_t anttime;
-  Float_t mutime;
   Int_t is_coll;
   Int_t is_bhabha;
   Int_t nt_total;
@@ -129,20 +124,6 @@ public:
   Float_t kspiphi[5][2]; //[nks]
   Float_t kspith[5][2];  //[nks]
   Float_t kspipt[5][2];  //[nks]
-  Int_t ntlxe_total;
-  Int_t ntlxe;
-  Int_t ntlxelayers[10];          //[ntlxe]
-  Int_t tlxenhit[10];             //[ntlxe]
-  Float_t tlxelength[10];         //[ntlxe]
-  Float_t tlxededx[10];           //[ntlxe]
-  Float_t tlxeir[10];             //[ntlxe]
-  Float_t tlxeitheta[10];         //[ntlxe]
-  Float_t tlxeiphi[10];           //[ntlxe]
-  Float_t tlxevtheta[10];         //[ntlxe]
-  Float_t tlxevphi[10];           //[ntlxe]
-  Float_t tlxechi2[10];           //[ntlxe]
-  Float_t tlxesen[10];            //[ntlxe]
-  Float_t tlxesen_layers[10][14]; //[ntlxe]
   Int_t nph_total;
   Int_t nph;
   Float_t phen[10];              //[nph]
@@ -160,39 +141,6 @@ public:
   Int_t phflag[10];              //[nph]
   Int_t phconv[10];              //[nph]
   Int_t phfc[10];                //[nph]
-  Int_t nzcs_total;
-  Int_t nzcs;
-  Int_t zcsch[17];     //[nzcs]
-  Int_t zcsstat[17];   //[nzcs]
-  Float_t zcsamp[17];  //[nzcs]
-  Float_t zcstime[17]; //[nzcs]
-  Float_t zcsphi[17];  //[nzcs]
-  Int_t nzcc_total;
-  Int_t nzcc;
-  Int_t zccl[18];     //[nzcc]
-  Int_t zccns[18];    //[nzcc]
-  Float_t zccamp[18]; //[nzcc]
-  Int_t zcct[18];     //[nzcc]
-  Float_t zccz[18];   //[nzcc]
-  Int_t zccvalid[18]; //[nzcc]
-  Int_t nant;
-  Int_t antch[16];   //[nant]
-  Float_t antt0[16]; //[nant]
-  Float_t antt1[16]; //[nant]
-  Float_t anta0[16]; //[nant]
-  Float_t anta1[16]; //[nant]
-  Int_t antst[16];   //[nant]
-  Int_t nmu;
-  Int_t much[9];   //[nmu]
-  Float_t mut0[9]; //[nmu]
-  Float_t mut1[9]; //[nmu]
-  Float_t mut2[9]; //[nmu]
-  Float_t mut3[9]; //[nmu]
-  Float_t mua0[9]; //[nmu]
-  Float_t mua1[9]; //[nmu]
-  Float_t mua2[9]; //[nmu]
-  Float_t mua3[9]; //[nmu]
-  Int_t must[9];   //[nmu]
   Int_t nsim;
   Int_t simtype[24];    //[nsim]
   Int_t simorig[24];    //[nsim]
@@ -202,14 +150,6 @@ public:
   Float_t simvtx[24];   //[nsim]
   Float_t simvty[24];   //[nsim]
   Float_t simvtz[24];   //[nsim]
-  Int_t ncorr;
-  Int_t idcorr[1];  //[ncorr]
-  Int_t bitcorr[1]; //[ncorr]
-  Int_t nbadbank;
-  Int_t nbadbankg;
-  Int_t nbadbanks[1]; //[nbadbankg]
-  Int_t nlostbanks;
-  Int_t ncorruptedbanks;
 
   // List of branches
   TBranch *b_ebeam;           //!
@@ -223,9 +163,6 @@ public:
   TBranch *b_trigmchs;        //!
   TBranch *b_trigtime;        //!
   TBranch *b_time;            //!
-  TBranch *b_dcfittime;       //!
-  TBranch *b_anttime;         //!
-  TBranch *b_mutime;          //!
   TBranch *b_is_coll;         //!
   TBranch *b_is_bhabha;       //!
   TBranch *b_nt_total;        //!
@@ -291,20 +228,6 @@ public:
   TBranch *b_kspiphi;         //!
   TBranch *b_kspith;          //!
   TBranch *b_kspipt;          //!
-  TBranch *b_ntlxe_total;     //!
-  TBranch *b_ntlxe;           //!
-  TBranch *b_ntlxelayers;     //!
-  TBranch *b_tlxenhit;        //!
-  TBranch *b_tlxelength;      //!
-  TBranch *b_tlxededx;        //!
-  TBranch *b_tlxeir;          //!
-  TBranch *b_tlxeitheta;      //!
-  TBranch *b_tlxeiphi;        //!
-  TBranch *b_tlxevtheta;      //!
-  TBranch *b_tlxevphi;        //!
-  TBranch *b_tlxechi2;        //!
-  TBranch *b_tlxesen;         //!
-  TBranch *b_tlxesen_layers;  //!
   TBranch *b_nph_total;       //!
   TBranch *b_nph;             //!
   TBranch *b_phen;            //!
@@ -322,39 +245,6 @@ public:
   TBranch *b_phflag;          //!
   TBranch *b_phconv;          //!
   TBranch *b_phfc;            //!
-  TBranch *b_nzcs_total;      //!
-  TBranch *b_nzcs;            //!
-  TBranch *b_zcsch;           //!
-  TBranch *b_zcsstat;         //!
-  TBranch *b_zcsamp;          //!
-  TBranch *b_zcstime;         //!
-  TBranch *b_zcsphi;          //!
-  TBranch *b_nzcc_total;      //!
-  TBranch *b_nzcc;            //!
-  TBranch *b_zccl;            //!
-  TBranch *b_zccns;           //!
-  TBranch *b_zccamp;          //!
-  TBranch *b_zcct;            //!
-  TBranch *b_zccz;            //!
-  TBranch *b_zccvalid;        //!
-  TBranch *b_nant;            //!
-  TBranch *b_antch;           //!
-  TBranch *b_antt0;           //!
-  TBranch *b_antt1;           //!
-  TBranch *b_anta0;           //!
-  TBranch *b_anta1;           //!
-  TBranch *b_antst;           //!
-  TBranch *b_nmu;             //!
-  TBranch *b_much;            //!
-  TBranch *b_mut0;            //!
-  TBranch *b_mut1;            //!
-  TBranch *b_mut2;            //!
-  TBranch *b_mut3;            //!
-  TBranch *b_mua0;            //!
-  TBranch *b_mua1;            //!
-  TBranch *b_mua2;            //!
-  TBranch *b_mua3;            //!
-  TBranch *b_must;            //!
   TBranch *b_nsim;            //!
   TBranch *b_simtype;         //!
   TBranch *b_simorig;         //!
@@ -364,18 +254,10 @@ public:
   TBranch *b_simvtx;          //!
   TBranch *b_simvty;          //!
   TBranch *b_simvtz;          //!
-  TBranch *b_ncorr;           //!
-  TBranch *b_idcorr;          //!
-  TBranch *b_bitcorr;         //!
-  TBranch *b_nbadbank;        //!
-  TBranch *b_nbadbankg;       //!
-  TBranch *b_nbadbanks;       //!
-  TBranch *b_nlostbanks;      //!
-  TBranch *b_ncorruptedbanks; //!
 
-  MC(TTree *tree = 0, string key = "model");
-  MC(string textname, string key);
-  MC(std::vector<string> filenames, string key);
+  MC(TTree *tree = 0, string key = "model", bool sys = false);
+  MC(string textname, string key, bool sys = false);
+  MC(std::vector<string> filenames, string key, bool sys = false);
   virtual ~MC();
   virtual Int_t Cut(Long64_t entry);
   virtual Int_t GetEntry(Long64_t entry);
@@ -392,13 +274,15 @@ public:
   virtual double Pcut(double Ebeam);
   virtual int Kinfit(Long64_t entry, std::vector<int> goods);
   virtual TLorentzVector VectorCreator(double P, double Theta, double Phi, double Mass);
+  virtual void FillSimParticles(Long64_t entry, std::vector<double> *simparticles);
 };
 
 #endif
 
 #ifdef MC_cxx
-MC::MC(string textname, string key) : fChain(0)
+MC::MC(string textname, string key, bool sys) : fChain(0)
 {
+  this->SYS = sys;
   TChain *t = new TChain("tr_ph");
   string chain_tree;
   ifstream o(textname.c_str());
@@ -410,8 +294,9 @@ MC::MC(string textname, string key) : fChain(0)
   SetOutputPath(key);
 }
 
-MC::MC(std::vector<string> filenames, string key) : fChain(0)
+MC::MC(std::vector<string> filenames, string key, bool sys) : fChain(0)
 {
+  this->SYS = sys;
   TChain *t = new TChain("tr_ph");
   for (auto f = filenames.begin(); f != filenames.end(); f++)
   {
@@ -421,10 +306,11 @@ MC::MC(std::vector<string> filenames, string key) : fChain(0)
   SetOutputPath(key);
 }
 
-MC::MC(TTree *tree, string key) : fChain(0)
+MC::MC(TTree *tree, string key, bool sys) : fChain(0)
 {
   // if parameter tree is not specified (or zero), connect the file
   // used to generate this class and read the Tree.
+  this->SYS = sys;
   if (tree == 0)
   {
     TFile *f = (TFile *)gROOT->GetListOfFiles()->FindObject("../inputs/model/900.root");
@@ -495,9 +381,6 @@ void MC::Init(TTree *tree)
   fChain->SetBranchAddress("trigbits", &trigbits, &b_trigbits);
   fChain->SetBranchAddress("trigmchs", &trigmchs, &b_trigmchs);
   fChain->SetBranchAddress("trigtime", &trigtime, &b_trigtime);
-  fChain->SetBranchAddress("dcfittime", &dcfittime, &b_dcfittime);
-  fChain->SetBranchAddress("anttime", &anttime, &b_anttime);
-  fChain->SetBranchAddress("mutime", &mutime, &b_mutime);
   fChain->SetBranchAddress("is_coll", &is_coll, &b_is_coll);
   fChain->SetBranchAddress("is_bhabha", &is_bhabha, &b_is_bhabha);
   fChain->SetBranchAddress("nt_total", &nt_total, &b_nt_total);
@@ -555,20 +438,6 @@ void MC::Init(TTree *tree)
   fChain->SetBranchAddress("kspiphi", kspiphi, &b_kspiphi);
   fChain->SetBranchAddress("kspith", kspith, &b_kspith);
   fChain->SetBranchAddress("kspipt", kspipt, &b_kspipt);
-  fChain->SetBranchAddress("ntlxe_total", &ntlxe_total, &b_ntlxe_total);
-  fChain->SetBranchAddress("ntlxe", &ntlxe, &b_ntlxe);
-  fChain->SetBranchAddress("ntlxelayers", ntlxelayers, &b_ntlxelayers);
-  fChain->SetBranchAddress("tlxenhit", tlxenhit, &b_tlxenhit);
-  fChain->SetBranchAddress("tlxelength", tlxelength, &b_tlxelength);
-  fChain->SetBranchAddress("tlxededx", tlxededx, &b_tlxededx);
-  fChain->SetBranchAddress("tlxeir", tlxeir, &b_tlxeir);
-  fChain->SetBranchAddress("tlxeitheta", tlxeitheta, &b_tlxeitheta);
-  fChain->SetBranchAddress("tlxeiphi", tlxeiphi, &b_tlxeiphi);
-  fChain->SetBranchAddress("tlxevtheta", tlxevtheta, &b_tlxevtheta);
-  fChain->SetBranchAddress("tlxevphi", tlxevphi, &b_tlxevphi);
-  fChain->SetBranchAddress("tlxechi2", tlxechi2, &b_tlxechi2);
-  fChain->SetBranchAddress("tlxesen", tlxesen, &b_tlxesen);
-  fChain->SetBranchAddress("tlxesen_layers", tlxesen_layers, &b_tlxesen_layers);
   fChain->SetBranchAddress("nph_total", &nph_total, &b_nph_total);
   fChain->SetBranchAddress("nph", &nph, &b_nph);
   fChain->SetBranchAddress("phen", phen, &b_phen);
@@ -586,34 +455,6 @@ void MC::Init(TTree *tree)
   fChain->SetBranchAddress("phflag", phflag, &b_phflag);
   fChain->SetBranchAddress("phconv", phconv, &b_phconv);
   fChain->SetBranchAddress("phfc", phfc, &b_phfc);
-  fChain->SetBranchAddress("nzcs_total", &nzcs_total, &b_nzcs_total);
-  fChain->SetBranchAddress("nzcs", &nzcs, &b_nzcs);
-  fChain->SetBranchAddress("zcsch", zcsch, &b_zcsch);
-  fChain->SetBranchAddress("zcsstat", zcsstat, &b_zcsstat);
-  fChain->SetBranchAddress("zcsamp", zcsamp, &b_zcsamp);
-  fChain->SetBranchAddress("zcstime", zcstime, &b_zcstime);
-  fChain->SetBranchAddress("zcsphi", zcsphi, &b_zcsphi);
-  fChain->SetBranchAddress("nzcc_total", &nzcc_total, &b_nzcc_total);
-  fChain->SetBranchAddress("nzcc", &nzcc, &b_nzcc);
-  fChain->SetBranchAddress("zccl", zccl, &b_zccl);
-  fChain->SetBranchAddress("zccns", zccns, &b_zccns);
-  fChain->SetBranchAddress("zccamp", zccamp, &b_zccamp);
-  fChain->SetBranchAddress("zcct", zcct, &b_zcct);
-  fChain->SetBranchAddress("zccz", zccz, &b_zccz);
-  fChain->SetBranchAddress("nant", &nant, &b_nant);
-  fChain->SetBranchAddress("antch", antch, &b_antch);
-  fChain->SetBranchAddress("antt0", antt0, &b_antt0);
-  fChain->SetBranchAddress("antt1", antt1, &b_antt1);
-  fChain->SetBranchAddress("anta0", anta0, &b_anta0);
-  fChain->SetBranchAddress("anta1", anta1, &b_anta1);
-  fChain->SetBranchAddress("antst", antst, &b_antst);
-  fChain->SetBranchAddress("nmu", &nmu, &b_nmu);
-  fChain->SetBranchAddress("much", much, &b_much);
-  fChain->SetBranchAddress("mut0", mut0, &b_mut0);
-  fChain->SetBranchAddress("mut1", mut1, &b_mut1);
-  fChain->SetBranchAddress("mua0", mua0, &b_mua0);
-  fChain->SetBranchAddress("mua1", mua1, &b_mua1);
-  fChain->SetBranchAddress("must", must, &b_must);
   fChain->SetBranchAddress("nsim", &nsim, &b_nsim);
   fChain->SetBranchAddress("simtype", simtype, &b_simtype);
   fChain->SetBranchAddress("simorig", simorig, &b_simorig);
@@ -654,7 +495,7 @@ Int_t MC::Cut(Long64_t entry)
   double pb = sqrt( s/4. - pow(0.497614, 2) );
   double dp = ( Pcut(emeas) + 10 )*1e-3; //добавка, чтоб с большей вероятностью охватить область событий
   double X = 2*( 1 - sqrt(1-(8*pb*dp - 4*dp*dp)/s) );
-  double Ephoton_max = X*emeas*1e-3;//new_v6 (GeV)
+  double Ephoton_max = X*emeas;//for old_v6/v7 (MeV) *1e-3; //for new_v6 (GeV)
   for( int i=0; i<nsim; i++)
     if((simtype[i]==22)&&(simorig[i]==0))
     {
@@ -671,13 +512,13 @@ std::vector<int> MC::Good_tracks(Long64_t entry)
   for (int i = 0; i < nt; i++)
   { //пробегаем по всем трекам из события, яхууу
 
-    if (fabs(tz[i]) > 10.0) //origin: 10;
+    if (fabs(tz[i]) > (SYS ? 13 : 10.0)) //origin: 10;
       continue; //вылетел из пучка
     if (tchi2r[i] > 30.0)
       continue; // хи2 хороший
     if (tchi2z[i] > 25.0)
       continue;
-    if ((tth[i] > (TMath::Pi() - 0.6)) || (tth[i] < 0.6))  //origin: 0.6;
+    if ((tth[i] > (TMath::Pi() - (SYS ? 0.5 : 0.6))) || (tth[i] < (SYS ? 0.5 : 0.6) ))  //origin: 0.6;
       continue; //летит в детектор
     if (tptot[i] < 40.)
       continue; //меньшие импульсы непригодны, т.к. треки закрутятся в дк
