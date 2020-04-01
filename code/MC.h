@@ -40,6 +40,10 @@ public:
   TTree *pic_mom;   //picture of momentum selection
   double ALIGN, MOMENTUM;
   bool PASSED_A, PASSED_M;
+  
+  TTree *mc_passed;
+  double PH_ENERGY;
+  bool PASSED_CUTS;
 
   TTree *fChain;  //!pointer to the analyzed TTree or TChain
   Int_t fCurrent; //!current Tree number in a TChain
@@ -275,6 +279,7 @@ public:
   virtual int Kinfit(Long64_t entry, std::vector<int> goods);
   virtual TLorentzVector VectorCreator(double P, double Theta, double Phi, double Mass);
   virtual void FillSimParticles(Long64_t entry, std::vector<double> *simparticles);
+  virtual double RadiativePhotonsEnergy(Long64_t entry);
 };
 
 #endif

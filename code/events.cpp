@@ -116,19 +116,46 @@ void events()
   // t.Washing17();
   // t.Washing11(true);
   t.WashingOth({
-// "root://cmd//scan2018/scan2018_tr_ph_fc_e480_v6.root"
-// "root://cmd//scan2018/scan2018_tr_ph_fc_e485_v6.root",
-// "root://cmd//scan2018/scan2018_tr_ph_fc_e490_v6.root",
-// "root://cmd//scan2018/scan2018_tr_ph_fc_e495_v6.root",
-// "root://cmd//scan2013_rho/scan2013_rho_tr_ph_fc_e480_v6.root",
-// "root://cmd//scan2013_rho/scan2013_rho_tr_ph_fc_e490_v6.root",
-// "root://cmd//scan2013_omphi/scan2013_omphi_tr_ph_fc_e479_v6.root",
-// "root://cmd//scan2013_omphi/scan2013_omphi_tr_ph_fc_e492_v6.root"
-// "/store17/petrov/data/multihadrons/tr_ph_run000001.root"
-// "root://cmd//sim/tr_ph_run045655_v5.root"
-// "root://cmd//sim/tr_ph_run045652_v5.root"
-// "root://cmd//sim/tr_ph_run045641_v5.root"
-"/store17/petrov/data/ee_1.9.root"
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.05.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.575.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.075.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.5.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.125.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.625.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.15.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.65.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.175.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.675.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.1.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.6.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.225.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.725.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.25.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.75.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.275.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.775.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.2.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.7.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.325.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.825.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.35.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.85.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.375.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.87.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.3.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.89.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.425.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.8.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.45.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.925.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.475.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.95.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.4.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.975.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.525.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.9.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_1.55.root",
+    "/store17/petrov/data/kskl_uniform_photon/tr_ph/tr_ph_kskl_2.0.root"
    });
   return;
 }

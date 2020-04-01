@@ -251,6 +251,17 @@ void MC::FillSimParticles(Long64_t entry, std::vector<double> *simparticles)
   return;
 }
 
+double MC::RadiativePhotonsEnergy(Long64_t entry)
+{
+    double ph_energy = 0;
+    for(int i=0; i<nsim; i++)
+        if((simtype[i]==22)&&(simorig[i]==0))
+        {
+            ph_energy += simmom[i];
+        }
+    return ph_energy;
+}
+
 void MC::Loop()
 {
   if (fChain == 0)
@@ -307,6 +318,10 @@ void MC::Loop()
   std::vector<double> *st = new std::vector<double>(); 
   if(model){
     pic_mom->Branch("simtypes","vector<double>",&st);
+    
+    mc_passed = new TTree("mc_passed", "Passed photons"); //дерево для эффективности регистрации от энергии фотона
+    mc_passed->Branch("ph_energy", &PH_ENERGY, "ph_energy/D");
+    mc_passed->Branch("passed_cuts", &PASSED_CUTS, "passed_cuts/O");
   }
 
   SYS = false;
@@ -326,8 +341,14 @@ void MC::Loop()
     LABEL = ebeam;
     //Общие условия
     goods = Good_tracks(ientry); //!!! изменить tptotV -> tptot !!!WARNING
-    if (goods.size() != 2)
-      continue; //2 хороших трека
+    if (goods.size() != 2){
+        if(model){
+            PASSED_CUTS = false;
+            PH_ENERGY = this->RadiativePhotonsEnergy(ientry);
+            mc_passed->Fill();
+        }
+        continue; //2 хороших трека
+    }
 
     if (tcharge[goods[0]] + tcharge[goods[1]] != 0)
       continue; //если суммарный заряд ненулевой, то выкинуться
@@ -342,6 +363,13 @@ void MC::Loop()
 
     //Стандартная процедура
     PROCEDURE += 2 * StandardProcedure(ientry, goods);
+      
+    if( model )
+    {
+        PASSED_CUTS = (PROCEDURE > 1) ? true : false;
+        PH_ENERGY = this->RadiativePhotonsEnergy(ientry);
+        mc_passed->Fill();
+    }
 
     if (PROCEDURE > 0)
       t->Fill();
