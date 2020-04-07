@@ -17,10 +17,10 @@ class PhotonEff():
         self.good_fits = dict()
     def __variance(self, k, n):
         return (k+1)*(k+2)/(n+2)/(n+3) - (k+1)**2/(n+2)**2
-    def __chi2(self, mu, s, c, N, a):
+    def __chi2(self, mu, s, c, N):
         xedges, points, errs = self.get_histo_by_name(self.fit_name)
-        return np.sum( np.square((points - self.sigFunc(xedges, mu, s, c, N, a))/errs) )
-    def sigFunc(self, x, mu, s, c, N, a):
+        return np.sum( np.square((points - self.sigFunc(xedges, mu, s, c, N))/errs) )
+    def sigFunc(self, x, mu, s, c, N):
         return N*( 1 - expit((x-mu)/s) + c)
     def get_signal_by_name(self, name, x):
         return self.sigFunc( x, *(self.fit_results[name][0]) )
@@ -32,25 +32,22 @@ class PhotonEff():
     def fit_histo_by_name(self, name):
         self.fit_name = name
         parameters = {
-            'mu':0.16,
-            's':1/25,
+            'mu': 0.16, #float(name)*2e-3*0.157-0.1547, #
+            's': 1/25, #float(name)*2e-3*0.0487-0.0493 , #
             'c':0.01,
             'N':0.35,
-            'a':1,
         }
         limits = {
-            'limit_mu' : [0.01, 1],
-            'limit_s' : [0,1],
+            'limit_mu' : [0.01, 1], #[parameters['mu'], parameters['mu']], #
+            'limit_s' : [0,1], #[parameters['s'], parameters['s']], #
             'limit_c' : [0,1],
             'limit_N' : [0,1],
-            'limit_a' : [0,10],
         }
         errors = {
             'error_mu' : 0.01,
             'error_s' : 1/25,
             'error_c' : 0.01,
             'error_N' : 0.05,
-            'error_a' : 0.1,
         }
         m = Minuit( self.__chi2, **parameters, **limits, **errors, errordef=1)
         m.migrad()
@@ -165,7 +162,7 @@ class RadCor:
             print('Problem')
         return integrate.quad( lambda x: self.F(x, s)*np.interp(s*(1-x), s_cs, cs)*p.sigFunc(np.sqrt(s/4)*x*1e-3, *params), 
                               0., Xmax, points=[0, 1], 
-                              limit=2000, epsrel=0.0005)
+                              limit=5000, epsrel=0.0005)
     def F_Radcor(self, e, cs, e_beam, params, Xmax=1):
         integral = self.F_Integral( e, cs, e_beam, params, Xmax)
         return ( integral[0]/np.interp(e_beam, e, cs), integral[1]/np.interp(e_beam, e, cs) )
@@ -196,12 +193,27 @@ class MDVM():
         E = np.sqrt(s)/2.
         w = np.where(s <= 4*Mn*Mn, 0, np.power( (s/4. - Mn**2)/((M**2)/4. - Mn**2), 3./2 )*(M**2)/s )
         return w
+    def FAS3(self, s):
+        twoe = (np.sqrt(np.array(s))*1e-3).reshape((-1,1)) #GeV        
+        A = np.array([-6.12394622, 25.0341405, -34.1311022, 15.5413717])
+        B = np.array([5.29354148, -7.90990714, -2.26007613, 5.21453902])
+        LM = 1.1
+#         TEMP1 = A1[0]+A1[1]*LM[1]+A1[2]*LM[1]*LM[1]+A1[3]*LM[1]*LM[1]*LM[1]
+#         TEMP2 = A[1]*LM[1]+A[2]*LM[1]*LM[1]+A[3]*LM[1]*LM[1]*LM[1]
+#         A[0] = TEMP1 - TEMP2
+#         TEMP1 = A[0] + A[1]*LM[0]+A[2]*LM[0]*LM[0]+A[3]*LM[0]*LM[0]*LM[0]
+#         TEMP2 = B[1]*LM[0]+B[2]*LM[0]*LM[0]+B[3]*LM[0]*LM[0]*LM[0]
+#         B[0] = TEMP1 - TEMP2
+        E = np.array([twoe**i for i in range(A.shape[0])])
+        POL = (np.where(twoe >= LM, B, A)*E).sum(axis=(0,2))
+        Fval = (POL/0.393728*(0.00749/0.0361478))
+        return Fval
     def PV3(self, s, MX, m1, m2, m3): #фазовый объём (почти: он типа нормирован) распада на 3 частицы
         #WARNING. TRY TO FIND THE RIGHT VARIANT
-        pv = (np.sqrt(s) - m1 - m2 - m3)**2
-        pv0 = (np.sqrt(MX*MX) - m1 - m2 - m3)**2
+        pv = self.FAS3(s) #(np.sqrt(s) - m1 - m2 - m3)**2
+        pv0 = self.FAS3(MX**2) #(np.sqrt(MX*MX) - m1 - m2 - m3)**2
         return pv/pv0
-    def PVG(self, s, M, Mn): #распад частицы M на фотон и частицу Mn
+    def PVG(self, s, MX, Mn): #распад частицы M на фотон и частицу Mn
         pv  = ((s - Mn**2)/(2*np.sqrt(s)))**3
         pv0 = ((MX**2 - Mn**2)/(2*MX))**3
         return pv/pv0
@@ -210,13 +222,13 @@ class MDVM():
         Br_3Pi = 0.892    
         Br_Pi0G = 0.084
         Br_2Pi = 0.0153
-        ost = 1 - Br_Pi0G - Br_2Pi;
+        ost = 1 - Br_Pi0G - Br_2Pi - Br_3Pi;
         
         mPC = self.mPC
         mP0 = self.mP0
 
-        W = W0 * ((Br_3Pi + ost) * PV3(s, MX, mPC, mPC, mP0) + \
-                  Br_Pi0G * PVG(s, MX, mP0) + Br_2Pi * PV2(s, MX, mPC));
+        W = W0 * ((Br_3Pi + ost) * self.PV3(s, MX, mPC, mPC, mP0) + \
+                  Br_Pi0G * self.PVG(s, MX, mP0) + Br_2Pi * self.PV2(s, MX, mPC));
         return W
     def WPhi(self, s, W0, MX):
         Br_KC = 0.492
@@ -231,8 +243,8 @@ class MDVM():
         mPC = self.mPC
         mP0 = self.mP0
 
-        W = W0*((Br_KC + ost)*PV2(s, MX, mKC) + Br_KN*PV2(s, MX, mK0) + \
-                Br_3Pi * PV3(s, MX, mPC, mPC, mP0) + Br_EG * PVG(s, MX, mEta));
+        W = W0*((Br_KC + ost)* self.PV2(s, MX, mKC) + Br_KN* self.PV2(s, MX, mK0) + \
+                Br_3Pi * self.PV3(s, MX, mPC, mPC, mP0) + Br_EG * self.PVG(s, MX, mEta));
         return W
     
     def WRhoX(self, s, W0, MX):
@@ -255,31 +267,33 @@ class MDVM():
     def BW_Rho(self, s):
         return self.BW_RhoX(s, self.mRho, self.w0Rho)
     def BW_Omg(self, s):
-        return self.BW_OmgX(s, self.mOmg, self.w0Omg)
+#         return self.BW_OmgX(s, self.mOmg, self.w0Omg)
+        return self.BW(s, self.mOmg, self.w0Omg, self.WOmg)
     def BW_Phi(self, s):
-        return self.BW_PhiX(s, self.mPhi, self.w0Phi)
+#         return self.BW_PhiX(s, self.mPhi, self.w0Phi)
+        return self.BW(s, self.mPhi, self.w0Phi, self.WPhi)
     def BW_Rho1(self, s):
-        return self.BW_RhoX(s, 1490, 340)
+        return self.BW_RhoX(s, 1465, 400)
     def BW_Omg1(self, s):
         return self.BW_OmgX(s, 1420, 220)
-    def BW_Rho2(self, s):
+    def BW_Rho2(self, s): #no found in PDG
         return self.BW_RhoX(s, 1574, 234)
     def BW_Omg2(self, s):
-        return self.BW_OmgX(s, 1688, 350)
-    def BW_Phi1(self, s, mPhi1, gPhi1):
-        return self.BW_PhiX(s, mPhi1, gPhi1)#, 1673, 182)
-    def BW_Rho3(self, s): #unused
-        return self.BW_RhoX(s, 1720, 250)
-    def BW_Rho4(self, s): #unused
-        return self.BW_RhoX(s, 1880, 160)
-    def BW_Rho5(self, s):
+        return self.BW_OmgX(s, 1670, 315)
+    def BW_Phi1(self, s, m=1673, g=182):
+        return self.BW_PhiX(s, m, g)
+    def BW_Rho3(self, s, m=1720, g=250):
+        return self.BW_RhoX(s, m, g)
+    def BW_Rho4(self, s, m=1880, g=160): #no found in PDG
+        return self.BW_RhoX(s, m, g)
+    def BW_Rho5(self, s): #no found in PDG
         return self.BW_RhoX(s, 2134, 343)
-    def BW_Phi2(self, s):
-        return self.BW_PhiX(s, 2198, 71)
+    def BW_Phi2(self, s, mPhi2=2198, gPhi2=71):
+        return self.BW_PhiX(s, mPhi2, gPhi2)#BESIII:2239.2, 139.8 #PDG: 2198, 71 
     
     #PUBLIC
     def F0(self, x, par, mode=False): #формфактор, нулевое приближение; mode: 0 - short/long; 1 - charged;
-        n = par[10] #1.027
+        n = par[9] #1.027
         s = (x*1e3)**2
         
         CR = par[0]
@@ -295,9 +309,9 @@ class MDVM():
     def F1(self, x, par, mode=False): #формфактор с учётом omega(1400)
         s = (x*1e3)**2
         
-        CR = np.array([par[0], par[3], par[6], par[8]]) # , 1-par[0]-par[3]-par[6] ]
-        CO = np.array([par[1], par[4], par[7], par[8]]) # , 1-par[0]-par[3]-par[6] ]
-        CP = np.array([par[2], par[5], par[9]])         # , 1-par[2]-par[5], 0 ]
+        CR = np.array([par[0], par[3], par[6], par[14]])#, par[8]])
+        CO = np.array([par[1], par[4], par[7]])#, par[9]])
+        CP = np.array([par[2], par[5], par[8]])
         
         KR = CR/2. if mode else -CR/2.
         KO = CO/6.
@@ -305,9 +319,9 @@ class MDVM():
         
         F1 = self.F0(x, par, mode)
         
-        F1 += KR[1] * self.BW_Rho1(s) + KR[2] * self.BW_Rho2(s) + KR[3] * self.BW_Rho5(s)
-        F1 += KO[1] * self.BW_Omg1(s) + KO[2] * self.BW_Omg2(s) + KO[3] * self.BW_Rho5(s)
-        F1 += KP[1] * self.BW_Phi1(s, par[11], par[12]) + KP[2] * self.BW_Phi2(s)
+        F1 += KR[1] * self.BW_Rho1(s) + KR[2] * self.BW_Rho3(s) + KR[3] * self.BW_Rho4(s, par[15], par[16])
+        F1 += KO[1] * self.BW_Omg1(s) + KO[2] * self.BW_Omg2(s)
+        F1 += KP[1] * self.BW_Phi1(s, par[12], par[13]) + KP[2] * self.BW_Phi2(s, par[10], par[11])
         return F1
         
     def Cross_Section(self, x, par, mode=False):
@@ -350,6 +364,19 @@ def get_KPKM_up(file='../../formfactor/data/k+k-.dat'):
     cs_kpkm['energy_err'] = 0.
     return cs_kpkm
 
+def get_KPKM_up2(file='../../formfactor/data/k+k-_bes.dat'):
+    cs_kpkm = pd.read_csv(file)
+    cs_kpkm['cs_err'] = np.sqrt( cs_kpkm.cs_stat**2 + cs_kpkm.cs_sys**2 )
+    cs_kpkm['cs'] *= 1e-3
+    cs_kpkm['cs_err'] *= 1e-3
+    cs_kpkm['energy_err'] = 0.
+    return cs_kpkm[['energy','energy_err','cs','cs_err']]
+
+def get_KSKL_babar(file='../../formfactor/data/kskl_babar.dat'):
+    cs_kpkm = pd.read_csv(file)
+    cs_kpkm['energy_err'] = 0.
+    return cs_kpkm[['energy','energy_err','cs','cs_err']]
+
 def get_KSKL_up(file='./data/fit_frame_19.csv', radcorsfile=None):
     cs_kskl = pd.read_csv(file)
     if radcorsfile is not None:
@@ -364,8 +391,11 @@ def get_KSKL_up(file='./data/fit_frame_19.csv', radcorsfile=None):
                                             (cs_kskl.TrigErr/cs_kskl.TrigEff)**2 )
     return cs_kskl[['energy','energy_err','cs','cs_err','rad']]
 
-def plot_cs(cs, fit_func, params):
-    plt.errorbar(data=cs, x='energy', y='cs', xerr='energy_err', yerr='cs_err', fmt='o')
-    x1 = np.linspace(cs.energy.min(), cs.energy.max(), 1000)
+def plot_cs(fit_func, params, *css):
+    xmin, xmax = 10, 0
+    for cs in css:
+        plt.errorbar(data=cs, x='energy', y='cs', xerr='energy_err', yerr='cs_err', fmt='o')
+        xmin, xmax = min(xmin, cs.energy.min()), max(xmax, cs.energy.max())
+    x1 = np.linspace(xmin, xmax, 1000)
     plt.plot(x1, fit_func(x1, params) )
     plt.yscale('log')
