@@ -28,9 +28,14 @@ double MC::pidedx(double P, double dEdX) //calculate dEdX for pions
   return pidedx;
 }
 
-double MC::Pcut(double Ebeam) //Mev
+std::vector<double> MC::Pcut(double Ebeam) //Mev
 {
-  return 2 * (0.0869 * Ebeam - 36.53);
+    double x = Ebeam*2e-3;
+    double angle =  0.205/(x-0.732) + 0.14;
+    double s1 = 29.2*(x-0.5) + 0.955;
+    double s2 = 10; //MeV
+    return {angle, s2, 2*s1};
+//   return 2 * (0.0869 * Ebeam - 36.53);
 }
 
 void MC::SetOutputPath(string key)
@@ -43,6 +48,7 @@ void MC::SetOutputPath(string key)
   }
 
   Long64_t nentries = fChain->GetEntriesFast();
+  Long64_t ent = fChain->GetEntries();
   Long64_t nbytes = 0, nb = 0;
 
   char label[100];
@@ -113,7 +119,7 @@ int MC::StandardProcedure(Long64_t entry, std::vector<int> goods)
   if (nks_total <= 0)
     return 0; //нет каонов - нет и отбора
 
-  double P_CUT = Pcut(emeas); //для каждой энергии кат по импульсу(энергии) теперь будет различаться //origin: Pcut(emeas)
+  std::vector<double> P_CUT = Pcut(emeas); //для каждой энергии кат по импульсу(энергии) теперь будет различаться
   double minDiv = TMath::Infinity();
 
   int bestKs = -1; //пора искать лучший каон. Из всех, найденных процедурой, найдём лучший, с инв.массой наиболее близкой к массе каона.
@@ -141,8 +147,13 @@ int MC::StandardProcedure(Long64_t entry, std::vector<int> goods)
   PASSED_A = (ksalign[bestKs] > (SYS ? 0.75 : 0.8) ) ? true : false;    //origin: 0.8                                      //отбор по косинусу между направлением импульса и направлением на пучок в р-фи плоскости
   if(emeas < mKs )
       PASSED_M = false;
-  else
-      PASSED_M = (fabs(ksptot[bestKs] - sqrt(emeas * emeas - mKs * mKs)) < P_CUT) ? true : false; //отбор по импульсу каона
+  else{
+      double p0 = sqrt(emeas * emeas - mKs * mKs);
+      double th = P_CUT[0]; //корреляция
+      bool cut_MOM1 = ( fabs( (MASS - mKs)*cos(th) - (MOMENTUM - p0)*sin(th) ) < P_CUT[1] );
+      bool cut_MOM2 = ( fabs( (MASS - mKs)*sin(th) + (MOMENTUM - p0)*cos(th) ) < P_CUT[2] );
+      PASSED_M = cut_MOM1&&cut_MOM2; //отбор по импульсу каона
+  }
 
   TLorentzVector KS = VectorCreator(ksptot[bestKs], ksth[bestKs], ksphi[bestKs], mKs);
   int i1 = ksvind[bestKs][0];
@@ -154,10 +165,8 @@ int MC::StandardProcedure(Long64_t entry, std::vector<int> goods)
   pic_align->Fill();
   pic_mom->Fill();
 
-  if (PASSED_A && PASSED_M){
-    // if(Cut(entry)<1)
-      // cout << "W\n";
-    return 1;}
+  if (PASSED_A && PASSED_M)
+      return 1;
   return 0;
 }
 
@@ -318,6 +327,7 @@ void MC::Loop()
   std::vector<double> *st = new std::vector<double>(); 
   if(model){
     pic_mom->Branch("simtypes","vector<double>",&st);
+    pic_mom->Branch("gamma_energy", &E_GAMMA, "gamma_energy/D");
     
     mc_passed = new TTree("mc_passed", "Passed photons"); //дерево для эффективности регистрации от энергии фотона
     mc_passed->Branch("ph_energy", &PH_ENERGY, "ph_energy/D");
@@ -333,14 +343,19 @@ void MC::Loop()
       break;
     nb = fChain->GetEntry(jentry);
     nbytes += nb;
+    if(!model && (badrun(runnum) == 1)) //check luminosity
+        continue;
+        
     
-    if(model)
+    if(model){
         FillSimParticles(ientry, st);
-    
+        E_GAMMA = this->RadiativePhotonsEnergy(ientry);
+    }
+        
     BEAM_ENERGY = emeas;
     LABEL = ebeam;
     //Общие условия
-    goods = Good_tracks(ientry); //!!! изменить tptotV -> tptot !!!WARNING
+    goods = Good_tracks(ientry);
     if (goods.size() != 2){
         if(model){
             PASSED_CUTS = false;
@@ -359,7 +374,7 @@ void MC::Loop()
     PROCEDURE = 0;
 
     //Kinfit
-//     PROCEDURE += Kinfit(ientry, goods); //вернуть kinfit на место (пока я с ним не работаю, пусть отдыхает)
+    PROCEDURE += Kinfit(ientry, goods); //вернуть kinfit на место (пока я с ним не работаю, пусть отдыхает)
 
     //Стандартная процедура
     PROCEDURE += 2 * StandardProcedure(ientry, goods);

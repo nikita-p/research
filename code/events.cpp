@@ -111,10 +111,15 @@ public:
 void events()
 {
   TreeReader t;
-  // t.WashingModelOldv6(true);
-  // t.WashingModelNewv6();
-  t.Washing17();
-  // t.Washing11(true);
-//   t.WashingOth({});
+//   t.WashingModelOldv7(false);
+//   t.WashingModelNewv6();
+   t.Washing19();
+//    t.Washing11();
+//   t.Washing11(true);
+//   t.WashingOth({
+//   "root://cmd//sim/tr_ph_run045069_v5.root",
+//   "root://cmd//sim/tr_ph_run045078_v5.root",
+//   "root://cmd//sim/tr_ph_run045076_v5.root",
+//   "root://cmd//sim/tr_ph_run045067_v5.root"});
   return;
 }

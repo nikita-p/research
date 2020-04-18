@@ -1,10 +1,3 @@
-//////////////////////////////////////////////////////////
-// This class has been automatically generated on
-// Mon Sep 30 17:16:27 2019 by ROOT version 6.16/00
-// from TTree tr_ph/Tree with the non-collinear events
-// found on file: ../inputs/model/900.root
-//////////////////////////////////////////////////////////
-
 #ifndef MC_h
 #define MC_h
 
@@ -19,6 +12,8 @@
 #include "Cmd3KF.C"
 #include "CovPPhiTheta2PxPyPz.C"
 #include "CovPtPhiTheta2PxPyPz.C"
+
+#include "/storeA/ryzhenenkov/badrunfunction.C" //lums
 
 // Header file for the classes stored in the TTree if any.
 
@@ -38,7 +33,7 @@ public:
 
   TTree *pic_align; //picture of align selection
   TTree *pic_mom;   //picture of momentum selection
-  double ALIGN, MOMENTUM;
+  double ALIGN, MOMENTUM, E_GAMMA;
   bool PASSED_A, PASSED_M;
   
   TTree *mc_passed;
@@ -275,7 +270,7 @@ public:
   virtual std::vector<int> Good_tracks(Long64_t entry);                  //получить вектор с индексами хороших треков
   virtual int StandardProcedure(Long64_t entry, std::vector<int> goods); //получить KS, который проходит стандартную процедуру отбора
   virtual double pidedx(double P, double dEdX);
-  virtual double Pcut(double Ebeam);
+  virtual std::vector<double> Pcut(double Ebeam);
   virtual int Kinfit(Long64_t entry, std::vector<int> goods);
   virtual TLorentzVector VectorCreator(double P, double Theta, double Phi, double Mass);
   virtual void FillSimParticles(Long64_t entry, std::vector<double> *simparticles);
@@ -496,17 +491,17 @@ Int_t MC::Cut(Long64_t entry)
   // This function may be called from Loop.
   // returns  1 if entry is accepted.
   // returns -1 otherwise.
-  double s = TMath::Power(2*emeas*1e-3, 2);
-  double pb = sqrt( s/4. - pow(0.497614, 2) );
-  double dp = ( Pcut(emeas) + 10 )*1e-3; //добавка, чтоб с большей вероятностью охватить область событий
-  double X = 2*( 1 - sqrt(1-(8*pb*dp - 4*dp*dp)/s) );
-  double Ephoton_max = X*emeas;//for old_v6/v7 (MeV) *1e-3; //for new_v6 (GeV)
-  for( int i=0; i<nsim; i++)
-    if((simtype[i]==22)&&(simorig[i]==0))
-    {
-      if(simmom[i]>Ephoton_max) 
-        return -1;
-    }
+//   double s = TMath::Power(2*emeas*1e-3, 2);
+//   double pb = sqrt( s/4. - pow(0.497614, 2) );
+//   double dp = ( Pcut(emeas) + 10 )*1e-3; //добавка, чтоб с большей вероятностью охватить область событий
+//   double X = 2*( 1 - sqrt(1-(8*pb*dp - 4*dp*dp)/s) );
+//   double Ephoton_max = X*emeas;//for old_v6/v7 (MeV) *1e-3; //for new_v6 (GeV)
+//   for( int i=0; i<nsim; i++)
+//     if((simtype[i]==22)&&(simorig[i]==0))
+//     {
+//       if(simmom[i]>Ephoton_max) 
+//         return -1;
+//     }
   return 1;
 
 }

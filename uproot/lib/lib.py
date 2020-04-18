@@ -59,7 +59,7 @@ class PhotonEff():
         xedges, points, errs = self.get_histo_by_name(name)
         plt.errorbar(xedges, points, yerr=errs, fmt='o')
         x = np.linspace(0, xedges.max(), 100)
-        text_string = f"name: {name}\n"
+        text_string = f"Energy: {name} MeV\n"
         if name in self.fit_results:
             plt.plot(x,  self.sigFunc(x, *(self.fit_results[name][0]) ) )
             chi2, ndf = self.fit_results[name][2], self.fit_results[name][3]
@@ -381,21 +381,30 @@ def get_KSKL_up(file='./data/fit_frame_19.csv', radcorsfile=None):
     cs_kskl = pd.read_csv(file)
     if radcorsfile is not None:
         rads = pd.read_csv(radcorsfile, index_col='name').sort_index()
+        rads['rel_err'] = rads['err']/rads['eff'] if 'eff' in rads else 0
         cs_kskl['rad'] = np.interp(cs_kskl.name, rads.index, rads.rad)
+        cs_kskl['rad_err_rel'] = np.interp(cs_kskl.name, rads.index, rads.rel_err)
     else:
         cs_kskl['rad'] = 1
+        cs_kskl['rad_err_rel'] = 0
     cs_kskl['cs'] = cs_kskl.Ns/(cs_kskl.lum*cs_kskl.TrigEff*cs_kskl.rad)
     cs_kskl['energy'] = cs_kskl.name*2e-3
-    cs_kskl['energy_err'] = 0.0
     cs_kskl['cs_err'] = cs_kskl.cs*np.sqrt( (cs_kskl.Ns_err/cs_kskl.Ns)**2 + 
-                                            (cs_kskl.TrigErr/cs_kskl.TrigEff)**2 )
-    return cs_kskl[['energy','energy_err','cs','cs_err','rad']]
+                                            (cs_kskl.TrigErr/cs_kskl.TrigEff)**2 +
+                                            cs_kskl.rad_err_rel**2 )
+    cs_kskl['dEmin'] *= 2e-3
+    cs_kskl['dEmax'] *= 2e-3
+    cs_kskl = cs_kskl.rename({'dEmin':'energy_err_min', 'dEmax':'energy_err_max'}, axis=1)
+    return cs_kskl[['energy','energy_err_min', 'energy_err_max','cs','cs_err','rad']]
 
-def plot_cs(fit_func, params, *css):
+def plot_cs(fit_func, params, css, labels):
     xmin, xmax = 10, 0
-    for cs in css:
-        plt.errorbar(data=cs, x='energy', y='cs', xerr='energy_err', yerr='cs_err', fmt='o')
+    for cs,lab in zip(css, labels):
+        x_err = cs.energy_err if 'energy_err' in cs.columns else cs[['energy_err_min', 'energy_err_max']].values.T
+        plt.errorbar(data=cs, x='energy', y='cs', xerr=x_err, yerr='cs_err', fmt='o', label=lab)
         xmin, xmax = min(xmin, cs.energy.min()), max(xmax, cs.energy.max())
-    x1 = np.linspace(xmin, xmax, 1000)
-    plt.plot(x1, fit_func(x1, params) )
+    if fit_func is not None:
+        x1 = np.linspace(xmin, xmax, 1000)
+        plt.plot(x1, fit_func(x1, params) )
+    plt.legend()
     plt.yscale('log')
