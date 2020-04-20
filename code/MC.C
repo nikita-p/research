@@ -113,6 +113,8 @@ int MC::StandardProcedure(Long64_t entry, std::vector<int> goods)
 { //вернуть отрицательное значение, если не проходит отборы
   MASS = -1;
   ANGLE_KS = -1;
+  M1 = -1;
+  M2 = -1;
   PASSED_A = false;
   PASSED_M = false;
 
@@ -150,8 +152,10 @@ int MC::StandardProcedure(Long64_t entry, std::vector<int> goods)
   else{
       double p0 = sqrt(emeas * emeas - mKs * mKs);
       double th = P_CUT[0]; //корреляция
-      bool cut_MOM1 = ( fabs( (MASS - mKs)*cos(th) - (MOMENTUM - p0)*sin(th) ) < P_CUT[1] );
-      bool cut_MOM2 = ( fabs( (MASS - mKs)*sin(th) + (MOMENTUM - p0)*cos(th) ) < P_CUT[2] );
+      M1 = (MASS - mKs)*cos(th) - (MOMENTUM - p0)*sin(th);
+      M2 = (MASS - mKs)*sin(th) + (MOMENTUM - p0)*cos(th);
+      bool cut_MOM1 = ( fabs( M1 ) < P_CUT[1] );
+      bool cut_MOM2 = ( fabs( M2 ) < P_CUT[2] );
       PASSED_M = cut_MOM1&&cut_MOM2; //отбор по импульсу каона
   }
 
@@ -161,10 +165,10 @@ int MC::StandardProcedure(Long64_t entry, std::vector<int> goods)
   TLorentzVector Pi1 = VectorCreator(tptot[i1], tth[i1], tphi[i1], mPi);
   TLorentzVector Pi2 = VectorCreator(tptot[i2], tth[i2], tphi[i2], mPi);
   ANGLE_KS = (Pi1 + Pi2).Angle(KS.Vect());
-
+  
   pic_align->Fill();
   pic_mom->Fill();
-
+      
   if (PASSED_A && PASSED_M)
       return 1;
   return 0;
@@ -290,6 +294,8 @@ void MC::Loop()
   t->Branch("procedure", &PROCEDURE, "procedure/I");       //метка процедуры, через которую прошло событие (1-standard, 2-kinfit, 3-both)
   t->Branch("trigger", &TRIGGER, "t/I");                   //номер сработавшего триггера
   t->Branch("mass", &MASS, "mass/D");                      //масса из стандартной процедуры
+  t->Branch("m1", &M1, "m1/D");                            //независимые оси
+  t->Branch("m2", &M2, "m2/D");
   t->Branch("mass_reco", &MASS_REC, "mass_reco/D");        //масса из кинфита
   t->Branch("angle_ks", &ANGLE_KS, "angle_ks/D");          //пространственный угол между KS и суммарным импульсом двух пионов
   t->Branch("theta_ks", &THETA_KS, "theta_ks/D");          //полярный угол KS из стандартной процедуры
@@ -307,6 +313,8 @@ void MC::Loop()
   pic_mom->Branch("momentum", &MOMENTUM, "momentum/D");
   pic_mom->Branch("mass", &MASS, "mass/D");
   pic_mom->Branch("passed", &PASSED_M, "passed/O");
+  pic_mom->Branch("m1", &M1, "m1/D");
+  pic_mom->Branch("m2", &M2, "m2/D");
 
   pic_kinfit = new TTree("pic_kinfit", "Tree as a picture of kinfit selection"); //отборы в кинфите
   pic_kinfit->Branch("kl_en", &KL_EN, "kl_en/D");
@@ -374,7 +382,7 @@ void MC::Loop()
     PROCEDURE = 0;
 
     //Kinfit
-    PROCEDURE += Kinfit(ientry, goods); //вернуть kinfit на место (пока я с ним не работаю, пусть отдыхает)
+//     PROCEDURE += Kinfit(ientry, goods); //вернуть kinfit на место (пока я с ним не работаю, пусть отдыхает)
 
     //Стандартная процедура
     PROCEDURE += 2 * StandardProcedure(ientry, goods);

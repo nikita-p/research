@@ -27,11 +27,11 @@ public:
   void Washing(std::vector<string> inputPath, string key, bool sys=false, bool time = false)
   {
     double time0 = clock() / (CLOCKS_PER_SEC + 0.);
-
+    cout << "The door is closing" << endl;
     MC cl(inputPath, key, sys);
     cout << "Go loop" << endl;
     cl.Loop();
-
+    cout << "Wow, I feel fresh" << endl;
     if (time)
       cout << "Washing time: " << clock() / (CLOCKS_PER_SEC + 0.) - time0 << "seconds." << endl;
     return;
@@ -60,7 +60,7 @@ public:
     WashingFromFile("../inputs/model_old_v6/trees", "model_old_v6", sys);
     MC cl("../inputs/model_old_v6/trees", "model_old_v6", sys);
     string write_file = (string)"../outputs/model_old_v6/soft_ph" + (sys ? "_sys" : "") + ".csv";
-    cl.GetSoftPhotonsNumber(write_file);
+//     cl.GetSoftPhotonsNumber(write_file);
     return;
   }
   
@@ -69,7 +69,7 @@ public:
     WashingFromFile("../inputs/model_old_v7/trees", "model_old_v7", sys);
     MC cl("../inputs/model_old_v7/trees", "model_old_v7", sys);
     string write_file = (string)"../outputs/model_old_v7/soft_ph" + (sys ? "_sys" : "") + ".csv";
-    cl.GetSoftPhotonsNumber(write_file);
+//     cl.GetSoftPhotonsNumber(write_file);
     return;
   }
   
@@ -78,7 +78,7 @@ public:
     WashingFromFile("../inputs/model_new_v6/trees", "model_new_v6", sys);
     MC cl("../inputs/model_new_v6/trees", "model_new_v6", sys);
     string write_file = (string)"../outputs/model_new_v6/soft_ph" + (sys ? (string)"_sys" : (string)"") + (string)".csv";
-    cl.GetSoftPhotonsNumber(write_file);
+//     cl.GetSoftPhotonsNumber(write_file);
     return;
   }
 

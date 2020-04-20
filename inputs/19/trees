@@ -1,3 +1,5 @@
+#root://cmd//scan2019/scan2019_tr_ph_fc_e650_v7.root
+#root://cmd//scan2019/scan2019_tr_ph_fc_e987.5_v7.root
 #root://cmd//scan2019/scan2019_tr_ph_fc_e537.5_v7.root
 #root://cmd//scan2019/scan2019_tr_ph_fc_e550.1_v7.root
 #root://cmd//scan2019/scan2019_tr_ph_fc_e550_v7.root
@@ -10,7 +12,6 @@
 #root://cmd//scan2019/scan2019_tr_ph_fc_e625_v7.root
 #root://cmd//scan2019/scan2019_tr_ph_fc_e637.5_v7.root
 #root://cmd//scan2019/scan2019_tr_ph_fc_e641_v7.root
-root://cmd//scan2019/scan2019_tr_ph_fc_e650_v7.root
 root://cmd//scan2019/scan2019_tr_ph_fc_e662.5_v7.root
 root://cmd//scan2019/scan2019_tr_ph_fc_e675_v7.root
 root://cmd//scan2019/scan2019_tr_ph_fc_e687.5_v7.root
@@ -41,4 +42,3 @@ root://cmd//scan2019/scan2019_tr_ph_fc_e955_v7.root
 root://cmd//scan2019/scan2019_tr_ph_fc_e962.5_v7.root
 root://cmd//scan2019/scan2019_tr_ph_fc_e975_v7.root
 root://cmd//scan2019/scan2019_tr_ph_fc_e978_v7.root
-root://cmd//scan2019/scan2019_tr_ph_fc_e987.5_v7.root

@@ -26,6 +26,7 @@ public:
   TTree *t; //main tree
   int PROCEDURE, TRIGGER;
   double MASS, MASS_REC, ANGLE_KS, THETA_KS, PHI_KS;
+  double M1, M2; //independent coordinates
 
   TTree *pic_kinfit; //picture of kinfit selection
   double KL_EN, CHI2, ANGLE_DIFF, MOM_KS, MOM_SUM;
