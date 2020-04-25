@@ -14,6 +14,7 @@
 #include "CovPtPhiTheta2PxPyPz.C"
 
 #include "/storeA/ryzhenenkov/badrunfunction.C" //lums
+// #include "/storeA/ryzhenenkov/database/lumlib.c" //doesn't work
 
 // Header file for the classes stored in the TTree if any.
 
@@ -265,7 +266,7 @@ public:
   virtual void Init(TTree *tree);
   virtual void Loop();
   virtual void SetOutputPath(string key);
-  virtual void GetSoftPhotonsNumber(string file = "soft_ph.csv");
+  virtual void GetLums(string file = "soft_ph.csv");
   virtual Bool_t Notify();
   virtual void Show(Long64_t entry = -1);
   virtual std::vector<int> Good_tracks(Long64_t entry);                  //получить вектор с индексами хороших треков

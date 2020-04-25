@@ -67,7 +67,7 @@ void MC::SetOutputPath(string key)
   return;
 }
 
-void MC::GetSoftPhotonsNumber(string file)
+void MC::GetLums(string file) //doesn't work
 {
   if (fChain == 0)
     return;
@@ -78,8 +78,9 @@ void MC::GetSoftPhotonsNumber(string file)
   if (!model)
     return;
 
-  int N_SOFT = 0;
+  double LUM = 0;
   double EMEAS = -1;
+  int RUN = -1;
   ofstream o(file.c_str());
   o << "label,lum\n";
 
@@ -91,21 +92,25 @@ void MC::GetSoftPhotonsNumber(string file)
     nb = fChain->GetEntry(jentry);
     nbytes += nb;
 
-    if (jentry == 0)
+    if (jentry == 0){
       EMEAS = emeas;
-
-    if (Cut(ientry) < 0)
-      continue;
-    N_SOFT++;
-
-    if (fabs(EMEAS - emeas) > 0.01)
-    {
-      o << EMEAS << ',' << N_SOFT << endl;
+      RUN = runnum;
+      LUM = 0;//getrunlum(RUN);
+    }
+      
+    if(fabs(EMEAS - emeas) > 0.01){
+      o << EMEAS << ',' << LUM << endl;
       EMEAS = emeas;
-      N_SOFT = 0;
+      RUN = runnum;
+      LUM = 0;//getrunlum(RUN);
+    }
+      
+    if(RUN!=runnum){
+      RUN = runnum;
+      LUM += 0;//getrunlum(RUN);
     }
   }
-  o << EMEAS << ',' << N_SOFT << endl;
+  o << EMEAS << ',' << LUM << endl;
   return;
 }
 

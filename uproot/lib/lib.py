@@ -198,12 +198,6 @@ class MDVM():
         A = np.array([-6.12394622, 25.0341405, -34.1311022, 15.5413717])
         B = np.array([5.29354148, -7.90990714, -2.26007613, 5.21453902])
         LM = 1.1
-#         TEMP1 = A1[0]+A1[1]*LM[1]+A1[2]*LM[1]*LM[1]+A1[3]*LM[1]*LM[1]*LM[1]
-#         TEMP2 = A[1]*LM[1]+A[2]*LM[1]*LM[1]+A[3]*LM[1]*LM[1]*LM[1]
-#         A[0] = TEMP1 - TEMP2
-#         TEMP1 = A[0] + A[1]*LM[0]+A[2]*LM[0]*LM[0]+A[3]*LM[0]*LM[0]*LM[0]
-#         TEMP2 = B[1]*LM[0]+B[2]*LM[0]*LM[0]+B[3]*LM[0]*LM[0]*LM[0]
-#         B[0] = TEMP1 - TEMP2
         E = np.array([twoe**i for i in range(A.shape[0])])
         POL = (np.where(twoe >= LM, B, A)*E).sum(axis=(0,2))
         Fval = (POL/0.393728*(0.00749/0.0361478))
@@ -267,19 +261,17 @@ class MDVM():
     def BW_Rho(self, s):
         return self.BW_RhoX(s, self.mRho, self.w0Rho)
     def BW_Omg(self, s):
-#         return self.BW_OmgX(s, self.mOmg, self.w0Omg)
         return self.BW(s, self.mOmg, self.w0Omg, self.WOmg)
     def BW_Phi(self, s):
-#         return self.BW_PhiX(s, self.mPhi, self.w0Phi)
         return self.BW(s, self.mPhi, self.w0Phi, self.WPhi)
-    def BW_Rho1(self, s):
-        return self.BW_RhoX(s, 1465, 400)
-    def BW_Omg1(self, s):
-        return self.BW_OmgX(s, 1420, 220)
+    def BW_Rho1(self, s, m=1465, g=400):
+        return self.BW_RhoX(s, m, g)
+    def BW_Omg1(self, s, m=1420, g=220):
+        return self.BW_OmgX(s, m, g)
     def BW_Rho2(self, s): #no found in PDG
         return self.BW_RhoX(s, 1574, 234)
-    def BW_Omg2(self, s):
-        return self.BW_OmgX(s, 1670, 315)
+    def BW_Omg2(self, s, m=1670, g=315):
+        return self.BW_OmgX(s, m, g)
     def BW_Phi1(self, s, m=1673, g=182):
         return self.BW_PhiX(s, m, g)
     def BW_Rho3(self, s, m=1720, g=250):
@@ -319,8 +311,8 @@ class MDVM():
         
         F1 = self.F0(x, par, mode)
         
-        F1 += KR[1] * self.BW_Rho1(s) + KR[2] * self.BW_Rho3(s) + KR[3] * self.BW_Rho4(s, par[15], par[16])
-        F1 += KO[1] * self.BW_Omg1(s) + KO[2] * self.BW_Omg2(s)
+        F1 += KR[1] * self.BW_Rho1(s, par[17], par[18]) + KR[2] * self.BW_Rho3(s, par[23], par[24]) + KR[3] * self.BW_Rho4(s, par[15], par[16])
+        F1 += KO[1] * self.BW_Omg1(s, par[19], par[20]) + KO[2] * self.BW_Omg2(s, par[21], par[22])
         F1 += KP[1] * self.BW_Phi1(s, par[12], par[13]) + KP[2] * self.BW_Phi2(s, par[10], par[11])
         return F1
         
