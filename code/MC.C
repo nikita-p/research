@@ -7,6 +7,7 @@
 #include <TMath.h>
 #include <TLorentzVector.h>
 #include <iostream>
+#include <boost/algorithm/string.hpp>
 
 #define mKs 497.614
 #define mPi 139.570
@@ -32,13 +33,13 @@ std::vector<double> MC::Pcut(double Ebeam) //Mev
 {
     double x = Ebeam*2e-3;
     double angle =  0.205/(x-0.732) + 0.14;
-    double s1 = 29.2*(x-0.5) + 0.955;
+    double s1 = 100; // Mev old: 29.2*(x-0.5) + 0.955;
     double s2 = 10; //MeV
     return {angle, s2, 2*s1};
 //   return 2 * (0.0869 * Ebeam - 36.53);
 }
 
-void MC::SetOutputPath(string key)
+void MC::SetOutputPath(string key, string input_name)
 {
   string filepath = (string)"../outputs/" + key + "/trees" + (SYS ? "_sys" : "") + "/";
   if (fChain == 0)
@@ -51,18 +52,25 @@ void MC::SetOutputPath(string key)
   Long64_t ent = fChain->GetEntries();
   Long64_t nbytes = 0, nb = 0;
 
+  if(input_name==""){
   char label[100];
-  for (Long64_t jentry = 0; jentry < 1; jentry++)
-  {
-    Long64_t ientry = LoadTree(jentry);
-    if (ientry < 0)
-      break;
-    nb = fChain->GetEntry(jentry);
-    nbytes += nb;
+      for (Long64_t jentry = 0; jentry < 1; jentry++)
+      {
+        Long64_t ientry = LoadTree(jentry);
+        if (ientry < 0)
+          break;
+        nb = fChain->GetEntry(jentry);
+        nbytes += nb;
 
-    snprintf(label, sizeof(label), "%.2f_%d.root", ebeam, runnum);
-  }
+        snprintf(label, sizeof(label), "%.2f_%d.root", ebeam, runnum);
+      }
   this->path = filepath + label;
+  }
+  else{
+      std::vector<std::string> results;
+      boost::algorithm::split(results, input_name, boost::is_any_of("/"));
+      this->path = filepath + results.back();
+  }
   cout << "Out path: " << this->path << endl;
   return;
 }
@@ -150,8 +158,9 @@ int MC::StandardProcedure(Long64_t entry, std::vector<int> goods)
   MOMENTUM = ksptot[bestKs];
   THETA_KS = ksth[bestKs];
   PHI_KS = ksphi[bestKs];
+  LEN_KS = kslen[bestKs];
 
-  PASSED_A = (ksalign[bestKs] > (SYS ? 0.75 : 0.8) ) ? true : false;    //origin: 0.8                                      //отбор по косинусу между направлением импульса и направлением на пучок в р-фи плоскости
+  PASSED_A = (ksalign[bestKs] > (SYS ? 0.77 : 0.8) ) ? true : false;    //origin: 0.8                                      //отбор по косинусу между направлением импульса и направлением на пучок в р-фи плоскости
   if(emeas < mKs )
       PASSED_M = false;
   else{
@@ -159,9 +168,9 @@ int MC::StandardProcedure(Long64_t entry, std::vector<int> goods)
       double th = P_CUT[0]; //корреляция
       M1 = (MASS - mKs)*cos(th) - (MOMENTUM - p0)*sin(th);
       M2 = (MASS - mKs)*sin(th) + (MOMENTUM - p0)*cos(th);
-      bool cut_MOM1 = ( fabs( M1 ) < P_CUT[1] );
-      bool cut_MOM2 = ( fabs( M2 ) < P_CUT[2] );
-      PASSED_M = cut_MOM1&&cut_MOM2; //отбор по импульсу каона
+      bool cut_MOM1 = ( fabs( M1 ) < (SYS ? P_CUT[1]*1.05 : P_CUT[1]) );
+//       bool cut_MOM2 = ( fabs( M2 ) < (SYS ? P_CUT[2]*1.05 : P_CUT[2]) );
+      PASSED_M = cut_MOM1;//&&cut_MOM2; //отбор по импульсу каона
   }
 
   TLorentzVector KS = VectorCreator(ksptot[bestKs], ksth[bestKs], ksphi[bestKs], mKs);
@@ -305,6 +314,7 @@ void MC::Loop()
   t->Branch("angle_ks", &ANGLE_KS, "angle_ks/D");          //пространственный угол между KS и суммарным импульсом двух пионов
   t->Branch("theta_ks", &THETA_KS, "theta_ks/D");          //полярный угол KS из стандартной процедуры
   t->Branch("phi_ks", &PHI_KS, "phi_ks/D");          //азимутальный угол KS из стандартной процедуры
+  t->Branch("len_ks", &LEN_KS, "len_ks/D");          //длина отлёта KS
   
 
   //Способ извлекать картинки
@@ -347,8 +357,9 @@ void MC::Loop()
     mc_passed->Branch("passed_cuts", &PASSED_CUTS, "passed_cuts/O");
   }
 
-  SYS = false;
   double SYM_TYPES[10];
+  if(SYS) 
+    cout << "SYSTEMATICS MODE\n";
   for (Long64_t jentry = 0; jentry < nentries; jentry++)
   {
     Long64_t ientry = LoadTree(jentry);

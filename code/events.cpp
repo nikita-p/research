@@ -72,6 +72,24 @@ public:
     WashingFromFile("../inputs/model_new_v6/trees", "model_new_v6", sys);
     return;
   }
+    
+  void WashingModelNewv7(bool sys = false)
+  {
+    WashingFromFile("../inputs/model_new_v7/trees", "model_new_v7", sys);
+    return;
+  }
+    
+  void WashingModelUniformv6(bool sys = false)
+  {
+    WashingFromFile("../inputs/model_uniform_v6/trees", "model_uniform_v6", sys);
+    return;
+  }
+    
+  void WashingModelUniformv7(bool sys = false)
+  {
+    WashingFromFile("../inputs/model_uniform_v7/trees", "model_uniform_v7", sys);
+    return;
+  }
 
   void Washing11(bool sys = false)
   {
@@ -81,6 +99,10 @@ public:
   {
     WashingFromFile("../inputs/12/trees", "12", sys);
   }
+  void Washing13(bool sys = false)
+  {
+    WashingFromFile("../inputs/13/trees", "13", sys);
+  }
   void Washing17(bool sys = false)
   {
     WashingFromFile("../inputs/17/trees", "17", sys);
@@ -88,6 +110,12 @@ public:
   void Washing19(bool sys = false)
   {
     WashingFromFile("../inputs/19/trees", "19", sys);
+  }
+  void WashingFolder(string folder_key, bool sys = false)
+  {
+    string path = "../inputs/" + folder_key + "/trees";
+    WashingFromFile(path, folder_key, sys);
+    return;
   }
   void WashingOth(std::vector<string> other_files, string folder = "others", bool sys = false)
   {
@@ -101,6 +129,10 @@ public:
 
 void events_cores(string file, string key)
 {
+  if(file[0]=='#'){
+    cout << "Passed " << file << endl;
+    return;
+  }
   TreeReader t;
   t.Washing({file}, key, false, true);
   return;
@@ -109,31 +141,19 @@ void events_cores(string file, string key)
 void events()
 {
   TreeReader t;
-  t.WashingOth({
-      "root://cmd//sim/tr_ph_run045875_v5.root",
-      "root://cmd//sim/tr_ph_run045672_v5.root",
-      "root://cmd//sim/tr_ph_run045670_v5.root",
-      "root://cmd//sim/tr_ph_run045669_v5.root",
-      "root://cmd//sim/tr_ph_run045668_v5.root",
-      "root://cmd//sim/tr_ph_run045667_v5.root",
-      "root://cmd//sim/tr_ph_run045665_v5.root",
-      "root://cmd//sim/tr_ph_run045664_v5.root",
-      "root://cmd//sim/tr_ph_run045660_v5.root",
-      "root://cmd//sim/tr_ph_run045659_v5.root",
-      "root://cmd//sim/tr_ph_run045658_v5.root",
-      "root://cmd//sim/tr_ph_run045657_v5.root",
-      "root://cmd//sim/tr_ph_run045656_v5.root",
-      "root://cmd//sim/tr_ph_run045655_v5.root",
-      "root://cmd//sim/tr_ph_run045654_v5.root",
-      "root://cmd//sim/tr_ph_run045653_v5.root",
-      "root://cmd//sim/tr_ph_run045652_v5.root",
-      "root://cmd//sim/tr_ph_run045651_v5.root",
-      "root://cmd//sim/tr_ph_run045650_v5.root",
-      "root://cmd//sim/tr_ph_run045649_v5.root",
-      "root://cmd//sim/tr_ph_run045648_v5.root",
-      "root://cmd//sim/tr_ph_run045647_v5.root",
-      "root://cmd//sim/tr_ph_run045643_v5.root",
-      "root://cmd//sim/tr_ph_run045641_v5.root"      
-  }, "others/multihadrons");
+  t.WashingFolder("mc19");
+  //  t.WashingFolder("mc12");
+  //  t.WashingFolder("mc11");
+  //  t.WashingFolder("mc19_uniform");
+  //  t.WashingFolder("mc17_uniform");
+  //  t.WashingFolder("mc12_uniform");
+  //  t.WashingFolder("mc11_uniform");
+//    t.WashingModelNewv7(false);
+//   t.Washing13();
+//   t.Washing19();
+//   t.WashingModelUniformv7(true);
+//   t.WashingOth({
+//        "/store17/petrov/data/kskl_sim_custom/tr_ph_v7/tr_ph_kskl_1.125.root"
+//   }, "others");
   return;
 }

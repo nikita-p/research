@@ -1,7 +1,7 @@
 JOBS_COUNTER=0
-MAX_CHILDREN=8
+MAX_CHILDREN=10
 MY_PID=$$
-KEY="12"
+KEY="19"
 
 source KinScript.sh
 

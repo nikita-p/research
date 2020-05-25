@@ -26,7 +26,7 @@ public:
 
   TTree *t; //main tree
   int PROCEDURE, TRIGGER;
-  double MASS, MASS_REC, ANGLE_KS, THETA_KS, PHI_KS;
+  double MASS, MASS_REC, ANGLE_KS, THETA_KS, PHI_KS, LEN_KS;
   double M1, M2; //independent coordinates
 
   TTree *pic_kinfit; //picture of kinfit selection
@@ -265,7 +265,7 @@ public:
   virtual Long64_t LoadTree(Long64_t entry);
   virtual void Init(TTree *tree);
   virtual void Loop();
-  virtual void SetOutputPath(string key);
+  virtual void SetOutputPath(string key, string input_name="");
   virtual void GetLums(string file = "soft_ph.csv");
   virtual Bool_t Notify();
   virtual void Show(Long64_t entry = -1);
@@ -305,7 +305,8 @@ MC::MC(std::vector<string> filenames, string key, bool sys) : fChain(0)
     t->Add((*f).c_str());
   }
   Init(t);
-  SetOutputPath(key);
+  string fname = filenames[0];
+  SetOutputPath(key, fname);
 }
 
 MC::MC(TTree *tree, string key, bool sys) : fChain(0)
@@ -528,7 +529,7 @@ std::vector<int> MC::Good_tracks(Long64_t entry)
       continue; //куда ж ещё больше
     if (tnhit[i] <= 6)
       continue; //5 уравнений - 5 неизвестных: phi, theta, P, ...  -->>-- я добавил по сравн. с пред. версией 1 хит (стало 6)
-    if (fabs(pidedx(tptot[i], tdedx[i])) > 2000) //origin: 2000, tptotv
+    if (fabs(pidedx(tptot[i], tdedx[i])) > (SYS ? 2100 : 2000) ) //origin: 2000, tptotv
         continue; //ионизационные потери
     if (fabs(trho[i]) < 0.1) //origin: 0.1
       continue; //отбор по прицельному параметру
